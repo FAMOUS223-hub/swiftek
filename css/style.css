@@ -316,10 +316,18 @@ input, select { font-family: inherit; }
   position: relative;
   overflow: hidden;
 }
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #0A0A0F 0%, #1A1A2E 50%, #2D1B00 100%);
+  background: linear-gradient(135deg, rgba(10,10,15,0.75) 0%, rgba(26,26,46,0.65) 50%, rgba(45,27,0,0.6) 100%);
   z-index: 0;
 }
 .hero-bg::before {
@@ -1465,11 +1473,19 @@ select.admin-input { cursor: pointer; }
   padding: 48px 0 40px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #0A0A0F 0%, #1A1A2E 50%, #2D1B00 100%);
+}
+.admin-hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
 }
 .admin-hero-bg {
   position: absolute;
   inset: 0;
+  background: linear-gradient(135deg, rgba(10,10,15,0.75) 0%, rgba(26,26,46,0.65) 50%, rgba(45,27,0,0.6) 100%);
   z-index: 0;
 }
 .admin-hero-bg::before {

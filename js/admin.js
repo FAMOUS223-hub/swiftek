@@ -68,6 +68,13 @@ async function sha256(str) {
 function showDashboard() {
   loginScreen.classList.add('hidden');
   dashboard.classList.remove('hidden');
+
+  var heroVideo = document.querySelector('.admin-hero-video');
+  if (heroVideo) {
+    heroVideo.load();
+    setTimeout(function() { heroVideo.play().catch(function() {}); }, 100);
+  }
+
   renderAdminProducts();
 
   const hour = new Date().getHours();
@@ -90,6 +97,8 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
   passwordInput.value = '';
+  var heroVideo = document.querySelector('.admin-hero-video');
+  if (heroVideo) { heroVideo.pause(); }
 });
 
 /* ───── Product List ───── */
