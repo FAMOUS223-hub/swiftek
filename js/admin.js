@@ -377,6 +377,7 @@ function editProduct(id) {
   document.getElementById('field-price').value = product.basePrice || '';
   document.getElementById('field-description').value = product.description || '';
   document.getElementById('field-images').value = (product.images || []).join('\n');
+  renderImagePreviews();
   document.getElementById('field-instock').checked = product.inStock !== false;
   document.getElementById('field-featured').checked = product.featured === true;
 
@@ -414,6 +415,7 @@ function resetForm() {
   document.getElementById('field-price').value = '';
   document.getElementById('field-description').value = '';
   document.getElementById('field-images').value = '';
+  renderImagePreviews();
   document.getElementById('field-instock').checked = true;
   document.getElementById('field-featured').checked = false;
   document.getElementById('specs-container').innerHTML = '';
@@ -472,10 +474,39 @@ document.getElementById('field-image-upload')?.addEventListener('change', functi
         const existing = textarea.value.trim();
         const newImages = results.filter(Boolean).join('\n');
         textarea.value = existing ? existing + '\n' + newImages : newImages;
+        renderImagePreviews();
       }
     };
     reader.readAsDataURL(file);
   });
+  this.value = '';
+});
+
+function renderImagePreviews() {
+  const container = document.getElementById('image-preview-container');
+  const textarea = document.getElementById('field-images');
+  const images = textarea.value.trim().split('\n').map(s => s.trim()).filter(Boolean);
+  container.innerHTML = '';
+  images.forEach((src, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'admin-image-preview';
+    wrapper.innerHTML = `
+      <img src="${src}" alt="Product image ${i + 1}">
+      <button type="button" class="admin-image-remove" data-index="${i}" title="Remove image">&times;</button>
+    `;
+    container.appendChild(wrapper);
+  });
+}
+
+document.getElementById('image-preview-container')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.admin-image-remove');
+  if (!btn) return;
+  const textarea = document.getElementById('field-images');
+  const images = textarea.value.trim().split('\n').map(s => s.trim()).filter(Boolean);
+  const idx = parseInt(btn.dataset.index);
+  images.splice(idx, 1);
+  textarea.value = images.join('\n');
+  renderImagePreviews();
 });
 
 /* ───── Add Spec Row ───── */

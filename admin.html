@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body>
+<body class="admin-page">
 
   <!-- Announcement -->
   <div class="announcement">
@@ -28,6 +28,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Main Content -->
+  <main class="admin-main">
 
   <!-- Login Screen -->
   <div id="login-screen" class="admin-login">
@@ -115,6 +118,8 @@
     </div>
   </div>
 
+  </main>
+
   <!-- Footer (minimal) -->
   <footer class="footer admin-footer">
     <div class="footer-bottom">
@@ -201,8 +206,10 @@
           </div>
 
           <div class="admin-field admin-field-mt12">
-            <label>Images (URLs — one per line)</label>
-            <textarea id="field-images" class="admin-input" rows="2" placeholder="https://example.com/image1.jpg"></textarea>
+            <label>Images</label>
+            <textarea id="field-images" class="admin-input" style="display:none" rows="2"></textarea>
+            <input type="file" id="field-image-upload" accept="image/*" multiple class="admin-input">
+            <div id="image-preview-container" class="admin-image-preview-container"></div>
           </div>
 
           <div class="admin-section-label">Specifications</div>
