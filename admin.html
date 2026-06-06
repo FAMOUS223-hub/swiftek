@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — SwifTek</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- Announcement -->
+  <div class="announcement">
+    <i class="fas fa-lock"></i> Admin Panel &nbsp;·&nbsp; <strong>Product Management</strong>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek </span> Accessories</span>
+      </a>
+      <div class="admin-header-spacer"></div>
+      <div class="header-actions">
+        <button class="header-action-btn theme-toggle" aria-label="Toggle theme" title="Toggle theme"><i class="fas fa-moon"></i></button>
+        <a href="index.html" class="header-action-btn" title="Back to Store" aria-label="Store">←</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="admin-login">
+    <div class="admin-login-card">
+      <div class="admin-login-logo">
+        <span class="logo-icon">S</span>
+      </div>
+      <h1>Admin Login</h1>
+      <p class="admin-login-desc">Enter password to access the dashboard</p>
+      <form id="login-form">
+        <input type="password" id="admin-password" class="admin-input" placeholder="Password" autocomplete="off">
+        <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt12">Login</button>
+        <p id="login-error" class="admin-error hidden">Invalid password</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="admin-dashboard hidden">
+
+    <!-- Dashboard Hero -->
+      <div class="admin-hero">
+      <div class="admin-hero-bg"></div>
+      <div class="container">
+        <div class="admin-hero-content">
+          <div class="admin-hero-tag"><i class="fas fa-shield-alt"></i> Admin Dashboard</div>
+          <h1 class="admin-hero-title">Welcome back, <span>Admin</span></h1>
+          <p class="admin-hero-sub">Manage your products, track inventory, and keep your store running smoothly.</p>
+          <div class="admin-hero-actions">
+            <button id="add-product-btn" class="admin-btn admin-btn-primary admin-hero-btn">+ Add New Product</button>
+            <a href="index.html" class="admin-btn admin-btn-outline admin-hero-btn admin-hero-btn-outline"><i class="fas fa-external-link-alt"></i> View Store</a>
+            <button id="logout-btn" class="admin-btn admin-btn-outline admin-hero-btn admin-hero-btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats & Content -->
+    <div class="container admin-dashboard-main">
+      <div class="admin-stats">
+        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-search')?.focus();">
+          <div class="admin-stat-num" id="stat-total">0</div>
+          <div class="admin-stat-label">Total Products</div>
+        </div>
+        <div class="admin-stat-card clickable" onclick="document.getElementById('add-product-btn')?.click();">
+          <div class="admin-stat-num" id="stat-admin">0</div>
+          <div class="admin-stat-label">Admin Products</div>
+        </div>
+        <div class="admin-stat-card clickable" onclick="document.getElementById('trash-btn')?.click()">
+          <div class="admin-stat-num" id="stat-trash">0</div>
+          <div class="admin-stat-label">In Trash</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="admin-controls">
+        <button id="admin-prod-btn" class="admin-btn admin-btn-outline"><i class="fas fa-box"></i> Products</button>
+        <button id="trash-btn" class="admin-btn admin-btn-outline"><i class="fas fa-trash"></i> Trash</button>
+        <button id="settings-btn" class="admin-btn admin-btn-outline"><i class="fas fa-cog"></i> Settings</button>
+        <input type="text" id="admin-search" class="admin-input admin-input-search" placeholder="Search products...">
+      </div>
+
+      <!-- Product List -->
+      <div id="admin-product-list" class="admin-product-list"></div>
+
+      <!-- Admin Products -->
+      <div id="admin-prod-section" class="admin-prod-section hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-box"></i> All Products</h2>
+        <p class="admin-section-desc">Browse all products in your store inventory.</p>
+        <div id="admin-prod-list" class="admin-product-list"></div>
+      </div>
+
+      <!-- Trash -->
+      <div id="trash-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-trash"></i> Trash</h2>
+        <p class="admin-section-desc">Deleted products can be restored or permanently deleted.</p>
+        <div id="trash-list" class="admin-product-list"></div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settings-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-cog"></i> Settings</h2>
+        <p class="admin-section-desc">Manage your admin preferences.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer (minimal) -->
+  <footer class="footer admin-footer">
+    <div class="footer-bottom">
+      <span>&copy; 2026 SwifTek. All rights reserved.</span>
+      <span>Built with 🤍 by Famous Tech</span>
+    </div>
+  </footer>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-settings">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-cog"></i> Settings</h3>
+      </div>
+      <div class="custom-modal-body">
+        <div class="admin-section-label admin-pw-label"><i class="fas fa-key"></i> Change Password</div>
+        <form id="password-form">
+          <div class="admin-field">
+            <label for="pw-current">Current Password</label>
+            <input type="password" id="pw-current" class="admin-input" required autocomplete="off" placeholder="Enter current password">
+          </div>
+          <div class="admin-field">
+            <label for="pw-new">New Password</label>
+            <input type="password" id="pw-new" class="admin-input" required minlength="4" autocomplete="off" placeholder="Enter new password">
+          </div>
+          <div class="admin-field">
+            <label for="pw-confirm">Confirm New Password</label>
+            <input type="password" id="pw-confirm" class="admin-input" required minlength="4" autocomplete="off" placeholder="Confirm new password">
+          </div>
+          <p id="pw-error" class="admin-error hidden"></p>
+          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt8">Update Password</button>
+        </form>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" id="pw-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Form Modal -->
+  <div id="product-form-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-product-form">
+      <div class="custom-modal-header">
+        <h3 id="form-title">Add New Product</h3>
+      </div>
+      <div class="custom-modal-body">
+        <form id="product-form">
+          <div class="admin-form-grid">
+            <div class="admin-field">
+              <label for="field-name">Product Name *</label>
+              <input type="text" id="field-name" class="admin-input" required placeholder="Example: iPhone 16 Pro">
+            </div>
+            <div class="admin-field">
+              <label for="field-brand">Brand *</label>
+              <input type="text" id="field-brand" class="admin-input" required placeholder="Example: Apple">
+            </div>
+            <div class="admin-field">
+              <label for="field-category">Category *</label>
+              <select id="field-category" class="admin-input" required>
+                <option value="">Select...</option>
+                <option>Phones</option>
+                <option>Laptops</option>
+                <option>Audio</option>
+                <option>Wearables</option>
+                <option>Chargers</option>
+                <option>Accessories</option>
+                <option>Cables</option>
+                <option>Keypads</option>
+                <option>IT Accessories</option>
+              </select>
+            </div>
+            <div class="admin-field">
+              <label>Family (optional, e.g. iPhone)</label>
+              <input type="text" id="field-family" class="admin-input" placeholder="e.g. iPhone, MacBook">
+            </div>
+            <div class="admin-field">
+              <label for="field-price">Base Price (GH₵) *</label>
+              <input type="number" id="field-price" class="admin-input" min="0" required placeholder="Enter price in GH₵">
+            </div>
+            <div class="admin-field">
+              <label for="field-description">Description *</label>
+              <textarea id="field-description" class="admin-input" rows="3" required placeholder="Write a short product description"></textarea>
+            </div>
+          </div>
+
+          <div class="admin-field admin-field-mt12">
+            <label>Images (URLs — one per line)</label>
+            <textarea id="field-images" class="admin-input" rows="2" placeholder="https://example.com/image1.jpg"></textarea>
+          </div>
+
+          <div class="admin-section-label">Specifications</div>
+          <div id="specs-container">
+            <div class="admin-spec-row">
+              <input type="text" class="admin-input spec-key admin-input-flex" placeholder="Key">
+              <input type="text" class="admin-input spec-val admin-input-flex2" placeholder="Value">
+              <button type="button" class="admin-btn-sm admin-btn-danger remove-spec-btn" title="Remove">✕</button>
+            </div>
+          </div>
+          <button type="button" id="add-spec-btn" class="admin-btn-sm admin-btn-outline admin-btn-mt4">+ Add Spec</button>
+
+          <div class="admin-section-label admin-section-label-mt16">Options (storage, color, RAM, etc.)</div>
+          <div id="options-container">
+            <div class="admin-option-group">
+              <div class="admin-opt-group-header">
+                <input type="text" class="admin-input opt-type admin-input-flex" placeholder="Type (e.g. storage)">
+                <button type="button" class="admin-btn-sm admin-btn-danger remove-opt-group-btn" title="Remove">✕</button>
+              </div>
+              <div class="admin-opt-items">
+                <div class="admin-opt-row">
+                  <input type="text" class="admin-input opt-label admin-input-flex" placeholder="Label (e.g. 256GB)">
+                  <input type="text" class="admin-input opt-value admin-input-flex" placeholder='Price or hex (e.g. "0")'>
+                  <button type="button" class="admin-btn-sm admin-btn-danger remove-opt-btn" title="Remove">✕</button>
+                </div>
+              </div>
+              <button type="button" class="admin-btn-sm admin-btn-outline add-opt-item-btn admin-btn-mt4">+ Add Option</button>
+            </div>
+          </div>
+          <button type="button" id="add-opt-group-btn" class="admin-btn-sm admin-btn-outline admin-btn-mt4">+ Add Option Group</button>
+
+          <div class="admin-toggles admin-toggles-mt16">
+            <label class="admin-toggle">
+              <input type="checkbox" id="field-instock" checked>
+              <span class="admin-toggle-slider"></span>
+              <span>In Stock</span>
+            </label>
+            <label class="admin-toggle">
+              <input type="checkbox" id="field-featured">
+              <span class="admin-toggle-slider"></span>
+              <span>Featured</span>
+            </label>
+          </div>
+
+          <input type="hidden" id="field-editing-id" value="">
+          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt16">Save Product</button>
+        </form>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" id="cancel-form-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

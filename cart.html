@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SwifTek Accessories — Shopping Cart">
+  <title>Shopping Cart — SwifTek Accessories</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- Announcement -->
+  <div class="announcement">
+    📦 Free shipping on orders over $50 &nbsp;·&nbsp; <strong>🇬🇭 Delivering across Ghana</strong>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-inner">
+      <button class="menu-btn header-action-btn" aria-label="Menu">☰</button>
+      <a href="index.html" class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek </span>Accessories</span>
+      </a>
+      <div class="header-actions">
+        <button class="header-action-btn theme-toggle" aria-label="Toggle theme" title="Toggle theme"><i class="fas fa-moon"></i></button>
+        <a href="admin.html" class="header-action-btn" aria-label="Admin Login" title="Admin Login"><i class="fas fa-lock"></i></a>
+        <a href="cart.html" class="header-action-btn" aria-label="Cart">
+          🛒
+          <span class="cart-badge cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Sidebar -->
+  <div class="sidebar-overlay"></div>
+  <nav class="mobile-sidebar">
+    <div class="sidebar-head">
+      <span class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+      </span>
+      <button class="sidebar-close" aria-label="Close">✕</button>
+    </div>
+    <ul class="sidebar-links">
+      <li><a href="index.html"><span class="emoji">🔥</span> Home</a></li>
+      <li><a href="index.html?cat=Phones"><span class="emoji">📱</span> Phones</a></li>
+      <li><a href="index.html?cat=Keypads"><span class="emoji">📟</span> Keypads</a></li>
+      <li><a href="index.html?cat=Laptops"><span class="emoji">💻</span> Laptops</a></li>
+      <li><a href="index.html?cat=Audio"><span class="emoji">🎧</span> Audio</a></li>
+      <li><a href="index.html?cat=Chargers"><span class="emoji">🔌</span> Chargers</a></li>
+      <li><a href="index.html?cat=Accessories"><span class="emoji">📦</span> Accessories</a></li>
+      <li><a href="index.html?cat=IT Accessories"><span class="emoji">⌨️</span> IT Accessories</a></li>
+      <li><a href="index.html?cat=Wearables"><span class="emoji">⌚</span> Wearables</a></li>
+      <li><a href="index.html?cat=Cables"><span class="emoji">🔗</span> Cables</a></li>
+      <li><a href="cart.html"><span class="emoji">🛒</span> Cart</a></li>
+    </ul>
+  </nav>
+
+  <!-- Navigation -->
+  <nav class="nav-bar">
+    <ul class="nav-inner container">
+      <li><a href="index.html">← Continue Shopping</a></li>
+    </ul>
+  </nav>
+
+  <!-- Cart -->
+  <main class="cart-page container">
+    <div class="cart-head">
+      <div class="cart-head-left">
+        <h1>Shopping Cart</h1>
+        <span class="cart-head-info cart-count-label">0 items</span>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="cart-empty">
+      <div class="cart-empty-icon">🛒</div>
+      <h2>Your cart is empty</h2>
+      <p>Looks like you haven't added anything yet. Browse our collection!</p>
+      <a href="index.html" class="btn btn-primary">Browse Products →</a>
+    </div>
+
+    <!-- Cart Content -->
+    <div class="cart-layout">
+      <div class="cart-items"></div>
+      <div class="cart-summary hidden">
+        <h2>Order Summary</h2>
+        <p class="cart-summary-sub">Complete your order with WhatsApp</p>
+        <div class="sum-row">
+          <span>Subtotal</span>
+          <span class="amount" id="cart-subtotal">GH₵ 0</span>
+        </div>
+        <div class="sum-row">
+          <span>Shipping</span>
+          <span class="amount amount-free">Free</span>
+        </div>
+        <div class="promo-field">
+          <input type="text" id="promo-input" placeholder="Promo code" maxlength="20">
+          <button class="promo-btn" onclick="applyPromo()">Apply</button>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="sum-row total">
+          <span>Total</span>
+          <span class="amount" id="cart-total">GH₵ 0</span>
+        </div>
+        <button class="whatsapp-btn" onclick="checkoutWhatsApp()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Order via WhatsApp
+        </button>
+        <button class="clear-cart" onclick="clearCart()">Clear Cart</button>
+        <div class="ship-notice">
+          <span>🚚</span>
+          <span>Free shipping on all orders within Ghana</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo">
+          <span class="logo-icon">S</span>
+          <span class="logo-text logo-text-footer">Swif<span>Tek </span>Accessories</span>
+        </a>
+        <p>Your trusted source for premium tech products in Ghana. iPhones, Androids, laptops, accessories, and more — all authentic, all guaranteed.</p>
+      </div>
+      <div>
+        <h3>Shop</h3>
+        <ul>
+          <li><a href="index.html?cat=Phones">Phones</a></li>
+          <li><a href="index.html?cat=Keypads">Keypads</a></li>
+          <li><a href="index.html?cat=Laptops">Laptops</a></li>
+          <li><a href="index.html?cat=IT Accessories">IT Accessories</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <ul>
+          <li><a href="https://wa.me/233204694657" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+           <li><a href="#" onclick="event.preventDefault();openModal('delivery-modal')">Delivery Info</a></li>
+          <li><a href="#" onclick="event.preventDefault();openModal('returns-modal')">Returns</a></li>
+          <li><a href="#" onclick="event.preventDefault();openModal('faq-modal')">FAQ</a></li>
+          <li><a href="admin.html"><i class="fas fa-lock"></i> Admin</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <ul>
+          <li><a href="https://wa.me/233204694657" target="_blank" rel="noopener noreferrer">🇬🇭 +233 20 469 4657</a></li>
+          <li><a href="mailto:info@swiftek.com">info@swiftek.com</a></li>
+          <li><a href="#">Accra, Ghana</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 SwifTek Accessories. All rights reserved.</span>
+      <span>Built with 🤍 by Famous Tech</span>
+    </div>
+  </footer>
+
+  <!-- Delivery Modal -->
+  <div id="delivery-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-delivery">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-truck"></i> Delivery Information</h3>
+        <button class="modal-close-btn" onclick="closeModal('delivery-modal')" aria-label="Close">&times;</button>
+      </div>
+      <div class="custom-modal-body delivery-body">
+        <div class="faq-item">
+          <h4>Delivery areas</h4>
+          <p>We deliver to <strong>all regions</strong> in Ghana. Whether you are in Accra, Kumasi, Tamale, Takoradi, or any other city and town, we can get your order to you.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Delivery timeline</h4>
+          <p><strong>Accra &amp; nearby:</strong> 1–3 business days via our courier partners.<br><strong>Other regions:</strong> 3–7 business days depending on location and courier service.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Delivery cost</h4>
+          <p>Delivery fees are calculated at checkout based on your location and the item size. <strong>Free delivery</strong> is available on orders above GH₵ 500 within Accra.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Order tracking</h4>
+          <p>Once your order is dispatched, you will receive a <strong>tracking number</strong> via WhatsApp. You can use this to monitor your package in real time.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Cash on delivery</h4>
+          <p>We offer <strong>cash on delivery</strong> in select areas within Accra. A small deposit may be required to confirm the order. Contact us for availability in your area.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Delivery issues</h4>
+          <p>If your package has not arrived within the estimated timeframe, please contact us on <a href="https://wa.me/233204694657" target="_blank" rel="noopener noreferrer">WhatsApp</a> with your order reference — we will track it down immediately.</p>
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" onclick="closeModal('delivery-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Modal -->
+  <div id="faq-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-faq">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
+        <button class="modal-close-btn" onclick="closeModal('faq-modal')" aria-label="Close">&times;</button>
+      </div>
+      <div class="custom-modal-body faq-body">
+        <div class="faq-item">
+          <button class="faq-question" data-faq="0">
+            How do I place an order?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Browse our catalog, click on a product to view details, select your preferred options (storage, colour), and tap <strong>Add to Cart</strong>. When ready, go to your cart and choose <strong>Order via WhatsApp</strong> to complete your purchase.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="1">
+            What payment methods do you accept?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>We accept <strong>Mobile Money</strong> (MTN, Vodafone, AirtelTigo), <strong>bank transfers</strong>, and <strong>cash on delivery</strong> (available in select areas within Accra).</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="2">
+            Do you deliver across Ghana?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Yes! We deliver to all regions in Ghana. Delivery is handled through trusted courier services to ensure your items arrive safely.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="3">
+            How long does delivery take?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Delivery typically takes <strong>1–3 business days</strong> within Accra and <strong>3–7 business days</strong> to other regions. You will receive a tracking number once your order is dispatched.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="4">
+            Are your products authentic?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Absolutely. We source all products directly from authorised distributors and reputable suppliers. Every item is 100% genuine and comes with the manufacturer's warranty where applicable.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="5">
+            Do you offer warranty?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. All phones and laptops come with a <strong>12-month warranty</strong>. Accessories and audio products carry a <strong>6-month warranty</strong>. The warranty covers manufacturing defects — not physical damage or misuse.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="6">
+            What is your return policy?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>We offer a <strong>7-day return window</strong> for defective or incorrect items. Products must be in their original packaging with all accessories. For full details, see our <a href="#" onclick="event.preventDefault();closeModal('faq-modal');openModal('returns-modal')">Return Policy</a>.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" data-faq="7">
+            How do I contact support?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <p>Reach us on <a href="https://wa.me/233204694657" target="_blank" rel="noopener noreferrer">WhatsApp</a> at <strong>+233 20 469 4657</strong> or email <a href="mailto:info@swiftek.com">info@swiftek.com</a>. We typically respond within 30 minutes during business hours.</p>
+          </div>
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" onclick="closeModal('faq-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Returns Modal -->
+  <div id="returns-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-returns">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-undo-alt"></i> Return Policy</h3>
+        <button class="modal-close-btn" onclick="closeModal('returns-modal')" aria-label="Close">&times;</button>
+      </div>
+      <div class="custom-modal-body returns-body">
+        <div class="faq-item">
+          <h4>Return window</h4>
+          <p>You have <strong>7 days</strong> from the date of delivery to request a return. Requests made after 7 days may not be accepted.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Condition requirements</h4>
+          <p>To be eligible for a return, the item must be <strong>unused</strong>, in the same condition that you received it, and in its <strong>original packaging</strong> with all accessories and tags intact.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Non-returnable items</h4>
+          <p>The following items cannot be returned: <strong>screen protectors</strong> (due to hygiene reasons), <strong>customised or special-order items</strong>, and <strong>digital products</strong> (e.g. software, gift cards).</p>
+        </div>
+        <div class="faq-item">
+          <h4>How to initiate a return</h4>
+          <p>Contact us on <a href="https://wa.me/233204694657" target="_blank" rel="noopener noreferrer">WhatsApp</a> with your <strong>order reference number</strong> and a brief description of the issue. Our team will guide you through the next steps.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Refund process</h4>
+          <p>Once we receive and inspect the returned item, we will notify you of the approval or rejection of your refund. Approved refunds are processed within <strong>3–5 business days</strong> via your original payment method.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Shipping costs</h4>
+          <p>Return shipping costs are borne by the buyer unless the return is due to an error on our part (wrong item sent, defective product).</p>
+        </div>
+        <div class="faq-item">
+          <h4>Exchange policy</h4>
+          <p>We do not offer direct exchanges. If you need a different item, please initiate a return and place a new order.</p>
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" onclick="closeModal('returns-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
