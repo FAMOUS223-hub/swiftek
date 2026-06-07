@@ -200,7 +200,7 @@ input, select, textarea { font-family: inherit; }
 
 @media (max-width: 767px) {
   .header-action-btn { width: 44px; height: 44px; font-size: 15px; }
-  .menu-btn { display: flex; order: -1; font-size: 24px; width: 44px; height: 44px; }
+  .menu-btn { display: flex; order: -1; font-size: 28px; width: 48px; height: 48px; }
   .search-wrapper { order: 1; width: 100%; margin-top: 8px; }
   .logo { font-size: 17px; margin: 0 auto; }
   .logo-icon { width: 26px; height: 26px; font-size: 12px; }
