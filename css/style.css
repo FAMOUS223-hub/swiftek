@@ -199,12 +199,12 @@ input, select, textarea { font-family: inherit; }
 .menu-btn { display: none; font-size: 20px; }
 
 @media (max-width: 767px) {
-  .menu-btn { display: flex; order: -1; font-size: 30px; }
+  .header-action-btn { width: 44px; height: 44px; font-size: 15px; }
+  .menu-btn { display: flex; order: -1; font-size: 24px; width: 44px; height: 44px; }
   .search-wrapper { order: 1; width: 100%; margin-top: 8px; }
   .logo { font-size: 17px; margin: 0 auto; }
   .logo-icon { width: 26px; height: 26px; font-size: 12px; }
   .header-inner { padding: 10px 16px; flex-wrap: wrap; gap: 4px; }
-  .header-action-btn { width: 44px; height: 44px; font-size: 15px; }
   .nav-bar { top: 102px !important; }
   .header:not(:has(.search-wrapper)) + .nav-bar,
   body:not(:has(.search-wrapper)) .nav-bar { top: 58px !important; }
