@@ -14,7 +14,7 @@ const Config = require('./models/Config');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Amos_Nganbe:mynameis123MASTERcluster0.bzpm0f4.mongodb.net/swiftek?appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://nganbewuborijaamos_db_user:mynameis123MASTER@cluster1.hiezajm.mongodb.net/?appName=Cluster1';
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));

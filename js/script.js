@@ -233,7 +233,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
                onerror="this.onerror=null;this.src='https://images.pexels.com/photos/39284/macbook-apple-imac-computer-39284.jpeg?w=400&q=80'">
           <div class="product-card-badges">
             ${badge}
-            ${!product.inStock ? '<span class="product-badge badge-sold-out">Sold Out</span>' : ''}
+            ${product.inStock === false ? '<span class="product-badge badge-sold-out">Sold Out</span>' : ''}
           </div>
         </div>
         <div class="product-card-body">
@@ -482,7 +482,7 @@ async function renderProductDetail() {
           <span class="product-sub-brand">${pBrand}</span>
           <span class="product-sub-divider"></span>
           <span class="product-sub-brand">${pCategory}</span>
-          ${product.inStock ? '<span class="product-sub-divider"></span><span class="product-sub-stock">● In Stock</span>' : ''}
+          ${product.inStock !== false ? '<span class="product-sub-divider"></span><span class="product-sub-stock">● In Stock</span>' : ''}
         </div>
       </div>
 
