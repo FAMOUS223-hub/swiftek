@@ -75,11 +75,11 @@
     <!-- Stats & Content -->
     <div class="container admin-dashboard-main">
       <div class="admin-stats">
-        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-search')?.focus();">
+        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-prod-section')?.classList.add('hidden');document.getElementById('trash-section')?.classList.add('hidden');document.getElementById('admin-product-list')?.style.removeProperty('display');document.getElementById('admin-search')?.focus();">
           <div class="admin-stat-num" id="stat-total">0</div>
           <div class="admin-stat-label">Total Products</div>
         </div>
-        <div class="admin-stat-card clickable" onclick="document.getElementById('add-product-btn')?.click();">
+        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-prod-btn')?.click();">
           <div class="admin-stat-num" id="stat-admin">0</div>
           <div class="admin-stat-label">Admin Products</div>
         </div>

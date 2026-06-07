@@ -110,7 +110,7 @@ function renderAdminProducts() {
   const allProducts = products;
   const trash = getTrash();
   document.getElementById('stat-total').textContent = allProducts.length;
-  document.getElementById('stat-admin').textContent = adminProducts.length;
+  document.getElementById('stat-admin').textContent = adminProducts.filter(p => p._adminCreated).length;
   document.getElementById('stat-trash').textContent = trash.length;
   updateTrashBadge();
 
