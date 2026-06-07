@@ -328,7 +328,7 @@ function renderProductDetail() {
             <div class="icon">😕</div>
             <h3>Product not found</h3>
             <p>The product you're looking for doesn't exist</p>
-            <a href="index.html" class="btn btn-primary" style="display:inline-flex;margin-top:16px;">Back to Store</a>
+            <a href="index.html" class="btn btn-primary btn-back-inline">Back to Store</a>
           </div>
         </div>
       `;
@@ -374,7 +374,7 @@ function renderProductDetail() {
         if (isColor) {
           html += `
             <button class="color-swatch ${selectedOptions[key] === opt.label ? 'selected' : ''}"
-                    style="background:${opt.hex}"
+                    data-color="${opt.hex}"
                     data-key="${key}"
                     data-value="${optValue}"
                     onclick="window.selectOption('${key}', '${optValue}', this)">
@@ -532,6 +532,13 @@ function renderProductDetail() {
       </div>
     </div>
   `;
+
+  document.querySelectorAll('.color-swatch[data-color]').forEach(btn => {
+    const color = btn.dataset.color;
+    if (color) {
+      btn.style.background = color;
+    }
+  });
 
   window.switchTab = function(btn, tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

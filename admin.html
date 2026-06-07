@@ -6,6 +6,7 @@
   <title>Admin — SwifTek</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://www.apple.com">
 </head>
 <body class="admin-page">
 
@@ -56,7 +57,7 @@
       <video class="admin-hero-video" autoplay muted loop playsinline preload="auto">
         <source src="https://www.apple.com/105/media/us/iphone-17-pro/2025/704d4474-8e63-4ce7-9917-bb47b1ca4ba0/anim/hero/large_2x.mp4" type="video/mp4">
       </video>
-      <div class="admin-hero-bg"></div>
+      <div class="admin-hero-bg liquid"></div>
       <div class="container">
         <div class="admin-hero-content">
           <div class="admin-hero-tag"><i class="fas fa-shield-alt"></i> Admin Dashboard</div>
@@ -173,15 +174,15 @@
           <div class="admin-form-grid">
             <div class="admin-field">
               <label for="field-name">Product Name *</label>
-              <input type="text" id="field-name" class="admin-input" required placeholder="Example: iPhone 16 Pro">
+              <input type="text" id="field-name" name="field-name" class="admin-input" required placeholder="Example: iPhone 16 Pro">
             </div>
             <div class="admin-field">
               <label for="field-brand">Brand *</label>
-              <input type="text" id="field-brand" class="admin-input" required placeholder="Example: Apple">
+              <input type="text" id="field-brand" name="field-brand" class="admin-input" required placeholder="Example: Apple">
             </div>
             <div class="admin-field">
               <label for="field-category">Category *</label>
-              <select id="field-category" class="admin-input" required>
+              <select id="field-category" name="field-category" class="admin-input" required>
                 <option value="">Select...</option>
                 <option>Phones</option>
                 <option>Laptops</option>
@@ -195,23 +196,23 @@
               </select>
             </div>
             <div class="admin-field">
-              <label>Family (optional, e.g. iPhone)</label>
-              <input type="text" id="field-family" class="admin-input" placeholder="e.g. iPhone, MacBook">
+              <label for="field-family">Family (optional, e.g. iPhone)</label>
+              <input type="text" id="field-family" name="field-family" class="admin-input" placeholder="e.g. iPhone, MacBook">
             </div>
             <div class="admin-field">
               <label for="field-price">Base Price (GH₵) *</label>
-              <input type="number" id="field-price" class="admin-input" min="0" required placeholder="Enter price in GH₵">
+              <input type="number" id="field-price" name="field-price" class="admin-input" min="0" required placeholder="Enter price in GH₵">
             </div>
-            <div class="admin-field">
+            <div class="admin-field admin-field-full">
               <label for="field-description">Description *</label>
-              <textarea id="field-description" class="admin-input" rows="3" required placeholder="Write a short product description"></textarea>
+              <textarea id="field-description" name="field-description" class="admin-input" rows="3" required placeholder="Write a short product description"></textarea>
             </div>
           </div>
 
           <div class="admin-field admin-field-mt12">
-            <label>Images</label>
-            <textarea id="field-images" class="admin-input" style="display:none" rows="2"></textarea>
-            <input type="file" id="field-image-upload" accept="image/*" multiple class="admin-input">
+            <label for="field-image-upload">Images</label>
+            <textarea id="field-images" name="field-images" class="admin-input hidden" rows="2"></textarea>
+            <input type="file" id="field-image-upload" name="field-image-upload" accept="image/*" multiple class="admin-input">
             <div id="image-preview-container" class="admin-image-preview-container"></div>
           </div>
 
@@ -246,18 +247,18 @@
 
           <div class="admin-toggles admin-toggles-mt16">
             <label class="admin-toggle">
-              <input type="checkbox" id="field-instock" checked>
+              <input type="checkbox" id="field-instock" name="field-instock" checked>
               <span class="admin-toggle-slider"></span>
               <span>In Stock</span>
             </label>
             <label class="admin-toggle">
-              <input type="checkbox" id="field-featured">
+              <input type="checkbox" id="field-featured" name="field-featured">
               <span class="admin-toggle-slider"></span>
               <span>Featured</span>
             </label>
           </div>
 
-          <input type="hidden" id="field-editing-id" value="">
+          <input type="hidden" id="field-editing-id" name="field-editing-id" value="">
           <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt16">Save Product</button>
         </form>
       </div>

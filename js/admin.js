@@ -288,7 +288,7 @@ function renderTrash() {
       <div class="admin-product-info">
         <div class="admin-product-name">${escapeHtml(t.name)}</div>
         <div class="admin-product-meta">${escapeHtml(t.brand)} · ${escapeHtml(t.category)} · GH₵ ${t.basePrice.toLocaleString()}</div>
-        <div class="admin-product-meta" style="font-size:11px;color:var(--accent);">Trashed ${new Date(t._trashedAt).toLocaleDateString()}</div>
+        <div class="admin-product-meta admin-product-meta-trashed">Trashed ${new Date(t._trashedAt).toLocaleDateString()}</div>
       </div>
       <div class="admin-product-actions">
         <button class="admin-btn-sm admin-btn-primary" onclick="restoreProduct(${t.id})">Restore</button>
@@ -524,8 +524,8 @@ function addSpecRow(key = '', value = '') {
   const row = document.createElement('div');
   row.className = 'admin-spec-row';
   row.innerHTML = `
-    <input type="text" class="admin-input spec-key" placeholder="Key (e.g. Display)" value="${escapeHtml(key)}" style="flex:1;">
-    <input type="text" class="admin-input spec-val" placeholder="Value (e.g. 6.1-inch OLED)" value="${escapeHtml(value)}" style="flex:2;">
+    <input type="text" class="admin-input spec-key admin-input-flex" placeholder="Key (e.g. Display)" value="${escapeHtml(key)}">
+    <input type="text" class="admin-input spec-val admin-input-flex2" placeholder="Value (e.g. 6.1-inch OLED)" value="${escapeHtml(value)}">
     <button type="button" class="admin-btn-sm admin-btn-danger remove-spec-btn" title="Remove">✕</button>
   `;
   row.querySelector('.remove-spec-btn').addEventListener('click', () => row.remove());
@@ -540,8 +540,8 @@ function addOptionGroup(type = '', items = []) {
   const group = document.createElement('div');
   group.className = 'admin-option-group';
   group.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-      <input type="text" class="admin-input opt-type" placeholder="Type (e.g. storage, color)" value="${escapeHtml(type)}" style="flex:1;">
+    <div class="admin-opt-group-header">
+      <input type="text" class="admin-input opt-type admin-input-flex" placeholder="Type (e.g. storage, color)" value="${escapeHtml(type)}">
       <button type="button" class="admin-btn-sm admin-btn-danger remove-opt-group-btn" title="Remove Group">✕</button>
     </div>
     <div class="admin-opt-items"></div>
@@ -562,8 +562,8 @@ function addOptionItem(container, label = '', value = '') {
   const row = document.createElement('div');
   row.className = 'admin-opt-row';
   row.innerHTML = `
-    <input type="text" class="admin-input opt-label" placeholder="Label (e.g. 256GB)" value="${escapeHtml(label)}" style="flex:1;">
-    <input type="text" class="admin-input opt-value" placeholder='Price or hex (e.g. "0" or "#4A6FA5")' value="${escapeHtml(value)}" style="flex:1;">
+    <input type="text" class="admin-input opt-label admin-input-flex" placeholder="Label (e.g. 256GB)" value="${escapeHtml(label)}">
+    <input type="text" class="admin-input opt-value admin-input-flex" placeholder='Price or hex (e.g. "0" or "#4A6FA5")' value="${escapeHtml(value)}">
     <button type="button" class="admin-btn-sm admin-btn-danger remove-opt-btn" title="Remove">✕</button>
   `;
   row.querySelector('.remove-opt-btn').addEventListener('click', () => row.remove());
