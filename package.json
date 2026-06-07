@@ -8,6 +8,7 @@
     "seed": "node seed.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "mongodb": "^7.2.0",
     "mongoose": "^9.6.3"

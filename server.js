@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -13,7 +14,7 @@ const Config = require('./models/Config');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://nganbewuborijaamos_db_user:***REMOVED***@cluster0.bzpm0f4.mongodb.net/?appName=Cluster0/swiftek';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Amos_Nganbe:mynameis123MASTERcluster0.bzpm0f4.mongodb.net/swiftek?appName=Cluster0';
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
