@@ -1,44 +1,35 @@
 const WHATSAPP_NUMBER = '233204694657';
 let cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
 
-function getAdminProducts() {
+let _cachedProducts = null;
+
+async function getStoreProducts() {
+  if (_cachedProducts) return _cachedProducts;
   try {
-    return JSON.parse(localStorage.getItem('swiftek_admin_products')) || [];
+    const res = await fetch('/api/products');
+    _cachedProducts = await res.json();
+    return _cachedProducts;
   } catch {
-    return [];
+    const merged = products
+      .filter(p => !(JSON.parse(localStorage.getItem('swiftek_admin_deleted') || '[]')).includes(p.id))
+      .map(p => ({ ...p }));
+
+    const adminProducts = JSON.parse(localStorage.getItem('swiftek_admin_products') || '[]');
+    adminProducts.forEach(item => {
+      if (item._adminCreated) {
+        merged.push(item);
+        return;
+      }
+      const existingIndex = merged.findIndex(p => p.id === item.id);
+      if (existingIndex >= 0) {
+        merged[existingIndex] = { ...merged[existingIndex], ...item };
+      } else {
+        merged.push(item);
+      }
+    });
+    _cachedProducts = merged;
+    return merged;
   }
-}
-
-function getDeletedIds() {
-  try {
-    return JSON.parse(localStorage.getItem('swiftek_admin_deleted')) || [];
-  } catch {
-    return [];
-  }
-}
-
-function getStoreProducts() {
-  const adminProducts = getAdminProducts();
-  const deletedIds = getDeletedIds();
-  const merged = products
-    .filter(p => !deletedIds.includes(p.id))
-    .map(p => ({ ...p }));
-
-  adminProducts.forEach(item => {
-    if (item._adminCreated) {
-      merged.push(item);
-      return;
-    }
-
-    const existingIndex = merged.findIndex(p => p.id === item.id);
-    if (existingIndex >= 0) {
-      merged[existingIndex] = { ...merged[existingIndex], ...item };
-    } else {
-      merged.push(item);
-    }
-  });
-
-  return merged;
 }
 
 function saveCart() {
@@ -55,41 +46,42 @@ function updateCartCount() {
 }
 
 function addToCart(productId, selectedOptions = {}) {
-  const product = getProductById(productId);
-  if (!product) return;
+  getProductById(productId).then(product => {
+    if (!product) return;
 
-  let totalPrice = product.basePrice;
-  const specParts = [];
+    let totalPrice = product.basePrice;
+    const specParts = [];
 
-  for (const [key, value] of Object.entries(selectedOptions)) {
-    if (product.options[key]) {
-      const opt = product.options[key].find(o => o.label === value);
-      if (opt) {
-        totalPrice += opt.price || 0;
-        specParts.push(value);
+    for (const [key, value] of Object.entries(selectedOptions)) {
+      if (product.options[key]) {
+        const opt = product.options[key].find(o => o.label === value);
+        if (opt) {
+          totalPrice += opt.price || 0;
+          specParts.push(value);
+        }
       }
     }
-  }
 
-  const existingIndex = cart.findIndex(item =>
-    item.productId === productId &&
-    JSON.stringify(item.selectedOptions) === JSON.stringify(selectedOptions)
-  );
+    const existingIndex = cart.findIndex(item =>
+      item.productId === productId &&
+      JSON.stringify(item.selectedOptions) === JSON.stringify(selectedOptions)
+    );
 
-  if (existingIndex >= 0) {
-    cart[existingIndex].qty += 1;
-  } else {
-    cart.push({
-      productId,
-      selectedOptions: selectedOptions || {},
-      qty: 1,
-      price: totalPrice,
-      specs: specParts.join(', ')
-    });
-  }
+    if (existingIndex >= 0) {
+      cart[existingIndex].qty += 1;
+    } else {
+      cart.push({
+        productId,
+        selectedOptions: selectedOptions || {},
+        qty: 1,
+        price: totalPrice,
+        specs: specParts.join(', ')
+      });
+    }
 
-  saveCart();
-  showToast(`<span class="toast-icon">✓</span> ${product.name} added to cart`);
+    saveCart();
+    showToast(`<span class="toast-icon">✓</span> ${product.name} added to cart`);
+  });
 }
 
 function removeFromCart(index) {
@@ -123,8 +115,9 @@ function getCartTotal() {
   return cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 }
 
-function getProductById(id) {
-  return getStoreProducts().find(p => p.id === id);
+async function getProductById(id) {
+  const storeProducts = await getStoreProducts();
+  return storeProducts.find(p => p.id === id);
 }
 
 function formatPrice(price) {
@@ -170,38 +163,41 @@ function checkoutWhatsApp() {
   message += `*📋 ORDER ITEMS*%0A`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A`;
 
-  cart.forEach((item, i) => {
-    const product = getProductById(item.productId);
-    if (!product) return;
-    message += `%0A`;
-    message += `*${i + 1}. ${escapeHtml(product.name)}*%0A`;
-    if (item.specs) message += `   ─ ${escapeHtml(item.specs)}%0A`;
-    message += `   Qty: ${item.qty}  ×  ${formatPrice(item.price)}%0A`;
-    message += `   ─────────────────────────%0A`;
+  const promises = cart.map(async (item, i) => {
+    const product = await getProductById(item.productId);
+    if (!product) return '';
+    let msg = `%0A`;
+    msg += `*${i + 1}. ${escapeHtml(product.name)}*%0A`;
+    if (item.specs) msg += `   ─ ${escapeHtml(item.specs)}%0A`;
+    msg += `   Qty: ${item.qty}  ×  ${formatPrice(item.price)}%0A`;
+    msg += `   ─────────────────────────%0A`;
+    return msg;
   });
 
-  message += `%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A`;
-  message += `*💰  TOTAL AMOUNT  ${formatPrice(total)}*%0A`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A`;
+  Promise.all(promises).then(items => {
+    message += items.join('');
+    message += `%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A`;
+    message += `*💰  TOTAL AMOUNT  ${formatPrice(total)}*%0A`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A`;
 
-  message += `*👤 CUSTOMER INFO*%0A`;
-  message += `Please provide your full name and delivery address so we can process your order.%0A%0A`;
+    message += `*👤 CUSTOMER INFO*%0A`;
+    message += `Please provide your full name and delivery address so we can process your order.%0A%0A`;
 
-  message += `*📦 DELIVERY DETAILS*%0A`;
-  message += `📍 Delivery: *Accra, Ghana* (or specify your location)%0A`;
-  message += `⏱️ Estimated: 1–3 business days%0A%0A`;
+    message += `*📦 DELIVERY DETAILS*%0A`;
+    message += `📍 Delivery: *Accra, Ghana* (or specify your location)%0A`;
+    message += `⏱️ Estimated: 1–3 business days%0A%0A`;
 
-  message += `*💳 PAYMENT*%0A`;
-  message += `Pay on delivery (Cash / Mobile Money) or bank transfer.%0A%0A`;
+    message += `*💳 PAYMENT*%0A`;
+    message += `Pay on delivery (Cash / Mobile Money) or bank transfer.%0A%0A`;
 
-  message += `────────────────────────────────────────────%0A`;
-  message += `*SwifTek Accessories* — Premium Tech Store 🇬🇭%0A`;
-  message += `📞 ${WHATSAPP_NUMBER}%0A`;
-  message += `Thank you for your order! 🙏`;
+    message += `────────────────────────────────────────────%0A`;
+    message += `*SwifTek Accessories* — Premium Tech Store 🇬🇭%0A`;
+    message += `📞 ${WHATSAPP_NUMBER}%0A`;
+    message += `Thank you for your order! 🙏`;
 
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
-
-  clearCart();
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+    clearCart();
+  });
 }
 
 function applyPromo() {
@@ -254,7 +250,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
   }).join('');
 }
 
-function renderCart() {
+async function renderCart() {
   const container = document.querySelector('.cart-items');
   const summary = document.querySelector('.cart-summary');
   const empty = document.querySelector('.cart-empty');
@@ -274,8 +270,8 @@ function renderCart() {
   if (summary) summary.classList.remove('hidden');
   if (countLabel) countLabel.textContent = `${cart.length} item${cart.length > 1 ? 's' : ''}`;
 
-  container.innerHTML = cart.map((item, index) => {
-    const product = getProductById(item.productId);
+  const itemsHtml = await Promise.all(cart.map(async (item, index) => {
+    const product = await getProductById(item.productId);
     if (!product) return '';
     const img = product.images[0];
     const name = escapeHtml(product.name);
@@ -302,7 +298,9 @@ function renderCart() {
         </div>
       </div>
     `;
-  }).join('');
+  }));
+
+  container.innerHTML = itemsHtml.join('');
 
   if (summary) {
     const total = getCartTotal();
@@ -313,10 +311,10 @@ function renderCart() {
   }
 }
 
-function renderProductDetail() {
+async function renderProductDetail() {
   const params = new URLSearchParams(window.location.search);
   const id = parseInt(params.get('id'));
-  const product = getProductById(id);
+  const product = await getProductById(id);
 
   if (!product) {
     const el = document.querySelector('.product-detail');
@@ -495,22 +493,7 @@ function renderProductDetail() {
 
       <p class="product-desc">${pDesc}</p>
 
-      ${product.family ? (function() {
-        const familyProducts = getStoreProducts().filter(p => p.family === product.family);
-        if (familyProducts.length < 2) return '';
-        return `
-          <div class="opt-group">
-            <div class="opt-label">Model: <span class="opt-selected">${pName}</span></div>
-            <div class="opt-list">
-              ${familyProducts.map(fp => `
-                <a href="product.html?id=${fp.id}" class="opt-btn ${fp.id === product.id ? 'selected' : ''}">
-                  ${escapeHtml(fp.name)}${fp.basePrice !== product.basePrice ? ` — ${formatPrice(fp.basePrice)}` : ''}
-                </a>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      })() : ''}
+      <div id="family-products"></div>
 
       <div class="product-options" id="product-options">
         ${renderOptions()}
@@ -538,6 +521,27 @@ function renderProductDetail() {
       btn.style.background = color;
     }
   });
+
+  if (product.family) {
+    getStoreProducts().then(familyProducts => {
+      const familyFiltered = familyProducts.filter(p => p.family === product.family);
+      if (familyFiltered.length < 2) return;
+      const el = document.getElementById('family-products');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="opt-group">
+          <div class="opt-label">Model: <span class="opt-selected">${pName}</span></div>
+          <div class="opt-list">
+            ${familyFiltered.map(fp => `
+              <a href="product.html?id=${fp.id}" class="opt-btn ${fp.id === product.id ? 'selected' : ''}">
+                ${escapeHtml(fp.name)}${fp.basePrice !== product.basePrice ? ` — ${formatPrice(fp.basePrice)}` : ''}
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    });
+  }
 
   window.switchTab = function(btn, tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -574,8 +578,8 @@ function initSearch() {
   });
 }
 
-function applySearch(query) {
-  const storeProducts = getStoreProducts();
+async function applySearch(query) {
+  const storeProducts = await getStoreProducts();
   if (!query) {
     const activeCat = document.querySelector('.nav-inner a.active') ||
                      document.querySelector('.cat-pill.active');
@@ -614,13 +618,15 @@ function initCategoryFilter() {
         p.classList.toggle('active', p.dataset.category === category);
       });
 
-      if (category === 'all') {
-        renderProducts(getStoreProducts());
-      } else {
-        renderProducts(getStoreProducts().filter(p =>
-          p.category.toLowerCase() === category.toLowerCase()
-        ));
-      }
+      getStoreProducts().then(products => {
+        if (category === 'all') {
+          renderProducts(products);
+        } else {
+          renderProducts(products.filter(p =>
+            p.category.toLowerCase() === category.toLowerCase()
+          ));
+        }
+      });
 
       document.getElementById('products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -699,7 +705,7 @@ document.addEventListener('click', (e) => {
   item.classList.toggle('open', !isOpen);
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   updateCartCount();
 
@@ -707,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const searchParam = params.get('search');
     const catParam = params.get('cat');
-    const allProducts = getStoreProducts();
+    const allProducts = await getStoreProducts();
 
     let productsToRender = allProducts;
 
@@ -735,12 +741,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (document.getElementById('product-detail-content')) {
-    renderProductDetail();
+    await renderProductDetail();
     initSearch();
   }
 
   if (document.querySelector('.cart-items')) {
-    renderCart();
+    await renderCart();
   }
 
   initSidebar();

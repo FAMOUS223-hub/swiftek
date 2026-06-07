@@ -1,29 +1,4 @@
-const ADMIN_STORAGE_KEY = 'swiftek_admin_products';
 let editingId = null;
-
-function getAdminProducts() {
-  try {
-    const stored = localStorage.getItem(ADMIN_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-}
-
-function saveAdminProducts(adminProducts) {
-  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(adminProducts));
-}
-
-function getNextAdminId(adminProducts) {
-  if (adminProducts.length === 0) return 101;
-  return Math.max(...adminProducts.map(p => p.id)) + 1;
-}
-
-function createDefaultSpecs() {
-  return [
-    { key: 'Display', value: '' },
-    { key: 'Processor', value: '' },
-    { key: 'Battery', value: '' }
-  ];
-}
 
 function isStaticProduct(id) {
   return id < 101;
@@ -31,10 +6,6 @@ function isStaticProduct(id) {
 
 function isAdminCreated(id, adminProducts) {
   return adminProducts.some(p => p.id === id && p._adminCreated);
-}
-
-function getAdminOverride(id, adminProducts) {
-  return adminProducts.find(p => p.id === id && !p._adminCreated);
 }
 
 /* ───── Login ───── */
@@ -47,25 +18,17 @@ const passwordInput = document.getElementById('admin-password');
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const input = passwordInput.value;
-    const hash = await sha256(input);
-    if (hash === getStoredPasswordHash()) {
-      sessionStorage.setItem('swiftek_admin_logged_in', 'true');
+    try {
+      await loginApi(passwordInput.value);
       showDashboard();
-    } else {
+    } catch {
       loginError.classList.remove('hidden');
       passwordInput.value = '';
     }
   });
 }
 
-async function sha256(str) {
-  const buf = new TextEncoder().encode(str);
-  const digest = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function showDashboard() {
+async function showDashboard() {
   loginScreen.classList.add('hidden');
   dashboard.classList.remove('hidden');
 
@@ -75,7 +38,7 @@ function showDashboard() {
     setTimeout(function() { heroVideo.play().catch(function() {}); }, 100);
   }
 
-  renderAdminProducts();
+  await renderAdminProducts();
 
   const hour = new Date().getHours();
   let greeting = 'Welcome back';
@@ -87,13 +50,13 @@ function showDashboard() {
 }
 
 function checkLogin() {
-  if (sessionStorage.getItem('swiftek_admin_logged_in') === 'true') {
+  if (sessionStorage.getItem('swiftek_admin_token')) {
     showDashboard();
   }
 }
 
-document.getElementById('logout-btn')?.addEventListener('click', () => {
-  sessionStorage.removeItem('swiftek_admin_logged_in');
+document.getElementById('logout-btn')?.addEventListener('click', async () => {
+  await logoutApi();
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
   passwordInput.value = '';
@@ -102,13 +65,14 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
 });
 
 /* ───── Product List ───── */
-function renderAdminProducts() {
-  const adminProducts = getAdminProducts();
+async function renderAdminProducts() {
+  const adminProducts = await fetchAdminProducts();
+  const storeProducts = await fetchProducts();
   const container = document.getElementById('admin-product-list');
   const search = (document.getElementById('admin-search')?.value || '').toLowerCase();
 
-  const allProducts = products;
-  const trash = getTrash();
+  const allProducts = storeProducts;
+  const trash = await fetchTrash();
   document.getElementById('stat-total').textContent = allProducts.length;
   document.getElementById('stat-admin').textContent = adminProducts.filter(p => p._adminCreated).length;
   document.getElementById('stat-trash').textContent = trash.length;
@@ -151,33 +115,10 @@ function renderAdminProducts() {
 }
 
 /* ───── Delete / Trash ───── */
-const DELETED_STORAGE_KEY = 'swiftek_admin_deleted';
-const TRASH_STORAGE_KEY = 'swiftek_admin_trash';
-
-function getDeletedIds() {
-  try {
-    const stored = localStorage.getItem(DELETED_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-}
-
-function saveDeletedIds(ids) {
-  localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(ids));
-}
-
-function getTrash() {
-  try {
-    const stored = localStorage.getItem(TRASH_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-}
-
-function saveTrash(items) {
-  localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(items));
-}
 
 async function deleteProduct(id) {
-  const p = products.find(p => p.id === id);
+  const storeProducts = await fetchProducts();
+  const p = storeProducts.find(p => p.id === id);
   const confirmed = await showModal({
     title: 'Move to Trash',
     message: `Move "${p ? p.name : id}" to trash? You can restore it later.`,
@@ -187,61 +128,30 @@ async function deleteProduct(id) {
   });
   if (!confirmed) return;
 
-  const trash = getTrash();
-  const isAdmin = !isStaticProduct(id);
-
-  trash.push({
-    ...p,
-    _trashedAt: Date.now(),
-    _wasAdminProduct: isAdmin
-  });
-  saveTrash(trash);
-
-  if (isAdmin) {
-    let adminProducts = getAdminProducts();
-    adminProducts = adminProducts.filter(p => p.id !== id);
-    saveAdminProducts(adminProducts);
-  } else {
-    const deleted = getDeletedIds();
-    if (!deleted.includes(id)) {
-      deleted.push(id);
-      saveDeletedIds(deleted);
-    }
+  try {
+    await deleteProductApi(id);
+  } catch (e) {
+    await showModal({ title: 'Error', message: e.message, type: 'alert' });
+    return;
   }
 
   updateTrashBadge();
   location.reload();
 }
 
-function restoreProduct(id) {
-  let trash = getTrash();
-  const idx = trash.findIndex(t => t.id === id);
-  if (idx < 0) return;
-
-  const item = trash[idx];
-  trash.splice(idx, 1);
-  saveTrash(trash);
-
-  if (item._wasAdminProduct) {
-    let adminProducts = getAdminProducts();
-    if (!adminProducts.some(p => p.id === id)) {
-      const restored = { ...item };
-      delete restored._trashedAt;
-      delete restored._wasAdminProduct;
-      adminProducts.push(restored);
-      saveAdminProducts(adminProducts);
-    }
-  } else {
-    const deleted = getDeletedIds();
-    saveDeletedIds(deleted.filter(d => d !== id));
+async function restoreProduct(id) {
+  try {
+    await restoreProductApi(id);
+  } catch (e) {
+    await showModal({ title: 'Error', message: e.message, type: 'alert' });
+    return;
   }
-
   updateTrashBadge();
   location.reload();
 }
 
 async function deleteForever(id) {
-  let trash = getTrash();
+  const trash = await fetchTrash();
   const item = trash.find(t => t.id === id);
   const confirmed = await showModal({
     title: 'Delete Forever',
@@ -251,25 +161,30 @@ async function deleteForever(id) {
     type: 'confirm'
   });
   if (!confirmed) return;
-  trash = trash.filter(t => t.id !== id);
-  saveTrash(trash);
+
+  try {
+    await deleteForeverApi(id);
+  } catch (e) {
+    await showModal({ title: 'Error', message: e.message, type: 'alert' });
+    return;
+  }
   updateTrashBadge();
-  renderAdminProducts();
-  renderTrash();
+  await renderAdminProducts();
+  await renderTrash();
 }
 
-function updateTrashBadge() {
+async function updateTrashBadge() {
   const btn = document.getElementById('trash-btn');
-  const trash = getTrash();
+  const trash = await fetchTrash();
   if (btn) {
     btn.textContent = trash.length > 0 ? `🗑️ Trash (${trash.length})` : '🗑️ Trash';
   }
 }
 
-function renderTrash() {
+async function renderTrash() {
   const container = document.getElementById('trash-list');
   const section = document.getElementById('trash-section');
-  const trash = getTrash();
+  const trash = await fetchTrash();
   if (!container || !section) return;
 
   if (trash.length === 0) {
@@ -316,10 +231,10 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function renderAdminProdList() {
+async function renderAdminProdList() {
   const container = document.getElementById('admin-prod-list');
   const section = document.getElementById('admin-prod-section');
-  const allProducts = getAdminProducts();
+  const allProducts = await fetchAdminProducts();
   if (!container || !section) return;
 
   if (allProducts.length === 0) {
@@ -370,9 +285,10 @@ document.addEventListener('click', (e) => {
 });
 
 /* ───── Edit ───── */
-function editProduct(id) {
-  const adminProducts = getAdminProducts();
-  const product = products.find(p => p.id === id);
+async function editProduct(id) {
+  const adminProducts = await fetchAdminProducts();
+  const storeProducts = await fetchProducts();
+  const product = storeProducts.find(p => p.id === id);
   if (!product) return;
 
   editingId = id;
@@ -390,7 +306,6 @@ function editProduct(id) {
   document.getElementById('field-instock').checked = product.inStock !== false;
   document.getElementById('field-featured').checked = product.featured === true;
 
-  /* specs */
   const specsContainer = document.getElementById('specs-container');
   specsContainer.innerHTML = '';
   const specEntries = product.specifications ? Object.entries(product.specifications) : [];
@@ -400,7 +315,6 @@ function editProduct(id) {
     specEntries.forEach(([key, val]) => addSpecRow(key, val));
   }
 
-  /* options */
   const optionsContainer = document.getElementById('options-container');
   optionsContainer.innerHTML = '';
   if (product.options && Object.keys(product.options).length > 0) {
@@ -593,7 +507,6 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
 
   const images = imagesRaw ? imagesRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
 
-  /* specs */
   const specifications = {};
   document.querySelectorAll('#specs-container .admin-spec-row').forEach(row => {
     const key = row.querySelector('.spec-key').value.trim();
@@ -601,7 +514,6 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
     if (key && val) specifications[key] = val;
   });
 
-  /* options */
   const options = {};
   document.querySelectorAll('#options-container .admin-option-group').forEach(group => {
     const type = group.querySelector('.opt-type').value.trim();
@@ -620,46 +532,36 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
     if (items.length > 0) options[type] = items;
   });
 
-  let adminProducts = getAdminProducts();
   const editingIdVal = document.getElementById('field-editing-id').value;
 
-  if (editingIdVal) {
-    const id = parseInt(editingIdVal);
-    const idx = adminProducts.findIndex(p => p.id === id);
-    const isStatic = isStaticProduct(id);
-    const productData = { name, brand, category, family, basePrice, description, images, specifications, options, inStock, featured };
+  const productData = {
+    name, brand, category, family, basePrice, description, images,
+    specifications, options, inStock, featured
+  };
 
-    if (idx >= 0) {
-      adminProducts[idx] = { ...adminProducts[idx], ...productData };
-    } else if (isStatic) {
-      productData.id = id;
-      productData._adminOverride = true;
-      adminProducts.push(productData);
-    }
-  } else {
-    const newProduct = {
-      id: getNextAdminId(adminProducts),
-      name, brand, category, family, basePrice, description, images,
-      specifications, options, inStock, featured,
-      _adminCreated: true
-    };
-    adminProducts.push(newProduct);
+  if (editingIdVal) {
+    productData.id = parseInt(editingIdVal);
   }
 
-  saveAdminProducts(adminProducts);
+  try {
+    await saveAdminProductApi(productData);
+  } catch (e) {
+    await showModal({ title: 'Error', message: e.message, type: 'alert' });
+    return;
+  }
+
   await showModal({ title: 'Saved', message: 'Product saved!', type: 'alert' });
   location.reload();
 });
 
 /* ───── Search ───── */
-document.getElementById('admin-search')?.addEventListener('input', renderAdminProducts);
+let searchTimeout;
+document.getElementById('admin-search')?.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(renderAdminProducts, 200);
+});
 
 /* ───── Settings ───── */
-const PASSWORD_STORAGE_KEY = 'swiftek_admin_password_hash';
-
-function getStoredPasswordHash() {
-  return localStorage.getItem(PASSWORD_STORAGE_KEY) || ADMIN_PASSWORD_HASH;
-}
 
 document.getElementById('settings-btn')?.addEventListener('click', () => {
   const modal = document.getElementById('settings-modal');
@@ -698,15 +600,14 @@ document.getElementById('password-form')?.addEventListener('submit', async (e) =
     return;
   }
 
-  const currentHash = await sha256(current);
-  if (currentHash !== getStoredPasswordHash()) {
-    errorEl.textContent = 'Current password is incorrect';
+  try {
+    await changePasswordApi(current, newPw);
+  } catch (err) {
+    errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
     return;
   }
 
-  const newHash = await sha256(newPw);
-  localStorage.setItem(PASSWORD_STORAGE_KEY, newHash);
   document.getElementById('pw-current').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';

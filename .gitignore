@@ -1,0 +1,6 @@
+node_modules/
+data/deleted.json
+data/trash.json
+data/admin-products.json
+data/sessions.json
+.env

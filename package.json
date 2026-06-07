@@ -1,0 +1,15 @@
+{
+  "name": "swiftek",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.6.3"
+  }
+}
