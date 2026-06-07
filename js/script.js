@@ -187,9 +187,8 @@ function checkoutWhatsApp() {
   message += `*👤 CUSTOMER INFO*%0A`;
   message += `Please provide your full name and delivery address so we can process your order.%0A%0A`;
 
-  message += `*📦 DELIVERY*%0A`;
+  message += `*📦 DELIVERY DETAILS*%0A`;
   message += `📍 Delivery: *Accra, Ghana* (or specify your location)%0A`;
-  message += `🚚 Shipping: *Free*%0A`;
   message += `⏱️ Estimated: 1–3 business days%0A%0A`;
 
   message += `*💳 PAYMENT*%0A`;

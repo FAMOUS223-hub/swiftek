@@ -941,7 +941,7 @@ input, select, textarea { font-family: inherit; }
 .add-cart-btn.added { background: #30d158; }
 
 /* Cart Page */
-.cart-page { padding: 28px 0 48px; min-height: 60vh; }
+.cart-page { padding: 28px; min-height: 60vh; }
 .cart-head {
   display: flex;
   align-items: center;
