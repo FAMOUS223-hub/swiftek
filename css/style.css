@@ -728,7 +728,7 @@ input, select, textarea { font-family: inherit; }
 
 /* Product Detail */
 .product-detail {
-  padding: 28px 0;
+  padding: 28px;
   min-height: 60vh;
 }
 .detail-layout {
