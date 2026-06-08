@@ -11,6 +11,7 @@ const adminProductSchema = new mongoose.Schema({
   images: [String],
   specifications: mongoose.Schema.Types.Mixed,
   options: mongoose.Schema.Types.Mixed,
+  negotiable: { type: Boolean, default: false },
   _adminOverride: Boolean,
   _adminCreated: Boolean
 }, { timestamps: true });

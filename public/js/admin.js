@@ -1,3 +1,10 @@
+function togglePassword(btn) {
+  const input = btn.parentElement.querySelector('input');
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+  else { input.type = 'password'; icon.className = 'fas fa-eye'; }
+}
+
 let editingId = null;
 
 function isStaticProduct(id) {
@@ -53,8 +60,15 @@ async function showDashboard() {
 
   var heroVideo = document.querySelector('.admin-hero-video');
   if (heroVideo) {
-    heroVideo.load();
-    setTimeout(function() { heroVideo.play().catch(function() {}); }, 100);
+    heroVideo.play().catch(function() {
+      function tryPlay() {
+        heroVideo.play().catch(function(){});
+        document.removeEventListener('touchstart', tryPlay);
+        document.removeEventListener('click', tryPlay);
+      }
+      document.addEventListener('touchstart', tryPlay, {once: true});
+      document.addEventListener('click', tryPlay, {once: true});
+    });
   }
 
   await renderAdminProducts();
@@ -420,6 +434,7 @@ async function editProduct(id) {
   renderImagePreviews();
   document.getElementById('field-instock').checked = product.inStock !== false;
   document.getElementById('field-featured').checked = product.featured === true;
+  document.getElementById('field-negotiable').checked = product.negotiable === true;
 
   const specsContainer = document.getElementById('specs-container');
   specsContainer.innerHTML = '';
@@ -456,6 +471,7 @@ function resetForm() {
   renderImagePreviews();
   document.getElementById('field-instock').checked = true;
   document.getElementById('field-featured').checked = false;
+  document.getElementById('field-negotiable').checked = false;
   document.getElementById('specs-container').innerHTML = '';
   document.getElementById('options-container').innerHTML = '';
   addSpecRow('Display', '');
@@ -614,6 +630,7 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
   const imagesRaw = document.getElementById('field-images').value.trim();
   const inStock = document.getElementById('field-instock').checked;
   const featured = document.getElementById('field-featured').checked;
+  const negotiable = document.getElementById('field-negotiable').checked;
 
   if (!name || !brand || !category || !basePrice || !description) {
     await showModal({ title: 'Missing Fields', message: 'Please fill in all required fields.', type: 'alert' });
@@ -651,7 +668,7 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
 
   const productData = {
     name, brand, category, family, basePrice, description, images,
-    specifications, options, inStock, featured
+    specifications, options, inStock, featured, negotiable
   };
 
   if (editingIdVal) {

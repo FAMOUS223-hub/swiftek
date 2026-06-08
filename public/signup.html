@@ -10,7 +10,7 @@
 <body class="auth-video-page">
 
   <video class="auth-video-bg" autoplay muted loop playsinline preload="auto">
-    <source src="https://www.apple.com/105/media/us/iphone-16-pro/2024/77d87f1f-88e4-4527-8394-310f47f367eb/anim/hero/large_2x.mp4" type="video/mp4">
+    <source src="videos/auth-bg.mp4" type="video/mp4">
   </video>
   <div class="auth-video-overlay"></div>
 
@@ -49,11 +49,17 @@
         </div>
         <div class="auth-field">
           <label for="signup-password">Password</label>
-          <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+          <div class="password-input-wrap">
+            <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+          </div>
         </div>
         <div class="auth-field">
           <label for="signup-confirm">Confirm Password</label>
-          <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
+          <div class="password-input-wrap">
+            <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
+            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+          </div>
         </div>
         <p id="signup-error" class="auth-error hidden"></p>
         <p id="signup-success" class="auth-success hidden"></p>
@@ -73,6 +79,13 @@
 
   <script src="js/api.js"></script>
   <script>
+    function togglePassword(btn) {
+      const input = btn.parentElement.querySelector('input');
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+      else { input.type = 'password'; icon.className = 'fas fa-eye'; }
+    }
+
     function initTheme() {
       const saved = localStorage.getItem('swiftek_theme');
       if (saved === 'dark') document.body.classList.add('dark-theme');
@@ -174,6 +187,7 @@
 
     initTheme();
     updateCartCount();
+    (function(){var v=document.querySelector('.auth-video-bg');if(v)v.play()['catch'](function(){function t(){v.play()['catch'](function(){});document.removeEventListener('touchstart',t);document.removeEventListener('click',t);}document.addEventListener('touchstart',t,{once:true});document.addEventListener('click',t,{once:true});});})();
   </script>
 </body>
 </html>

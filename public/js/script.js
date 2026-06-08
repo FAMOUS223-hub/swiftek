@@ -277,6 +277,9 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
     const badge = product.featured
       ? '<span class="product-badge featured">Featured</span>'
       : '';
+    const negotiableBadge = product.negotiable
+      ? '<span class="product-badge badge-negotiable">Price Negotiable</span>'
+      : '<span class="product-badge badge-fixed">Fixed Price</span>';
     const name = escapeHtml(product.name);
     const brand = escapeHtml(product.brand);
     return `
@@ -287,6 +290,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
           <div class="product-card-badges">
             ${badge}
             ${product.inStock === false ? '<span class="product-badge badge-sold-out">Sold Out</span>' : ''}
+            ${negotiableBadge}
           </div>
         </div>
         <div class="product-card-body">
@@ -296,6 +300,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
             <div class="product-card-price">
               <span class="label">from </span>${formatPrice(product.basePrice)}
             </div>
+            <span class="price-${product.negotiable ? 'negotiable' : 'fixed'}-tag">${product.negotiable ? 'Negotiable' : 'Fixed Price'}</span>
           </div>
         </div>
       </a>
@@ -549,6 +554,7 @@ async function renderProductDetail() {
       <div class="product-pricing">
         <span class="product-price-main" id="detail-price">${formatPrice(getTotalPrice())}</span>
         ${product.options && Object.keys(product.options).length > 0 ? '<span class="product-price-label">(as configured)</span>' : ''}
+        <span class="product-price-${product.negotiable ? 'negotiable' : 'fixed'}">${product.negotiable ? 'Price Negotiable' : 'Fixed Price'}</span>
       </div>
 
       <p class="product-desc">${pDesc}</p>
@@ -690,6 +696,20 @@ function initCategoryFilter() {
 
       document.getElementById('products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+  });
+}
+
+function initHeroVideo() {
+  var video = document.querySelector('.hero-video');
+  if (!video) return;
+  video.play().catch(function() {
+    function tryPlay() {
+      video.play().catch(function(){});
+      document.removeEventListener('touchstart', tryPlay);
+      document.removeEventListener('click', tryPlay);
+    }
+    document.addEventListener('touchstart', tryPlay, {once: true});
+    document.addEventListener('click', tryPlay, {once: true});
   });
 }
 
@@ -1024,5 +1044,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCheckoutUserInfo();
   }
 
+  initHeroVideo();
   initSidebar();
 });

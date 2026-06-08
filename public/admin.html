@@ -48,7 +48,10 @@
         </div>
         <div class="admin-field">
           <label for="admin-password">Password</label>
-          <input type="password" id="admin-password" class="admin-input" placeholder="Enter your password" autocomplete="current-password">
+          <div class="admin-input-wrap">
+            <input type="password" id="admin-password" class="admin-input" placeholder="Enter your password" autocomplete="current-password">
+            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+          </div>
         </div>
         <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt12">Login</button>
         <p id="login-error" class="admin-error hidden">Invalid email or password</p>
@@ -62,7 +65,7 @@
     <!-- Dashboard Hero -->
       <div class="admin-hero">
       <video class="admin-hero-video" autoplay muted loop playsinline preload="auto">
-        <source src="https://www.apple.com/105/media/us/iphone-17-pro/2025/704d4474-8e63-4ce7-9917-bb47b1ca4ba0/anim/hero/large_2x.mp4" type="video/mp4">
+        <source src="videos/admin-hero.mp4" type="video/mp4">
       </video>
       <div class="admin-hero-bg liquid"></div>
       <div class="container">
@@ -218,15 +221,24 @@
           <div class="admin-section-label mt-16"><i class="fas fa-key"></i> Change Password <span class="fw-normal text-muted text-sm">(leave blank to keep current)</span></div>
           <div class="admin-field">
             <label for="pw-current">Current Password</label>
-            <input type="password" id="pw-current" class="admin-input" autocomplete="off" placeholder="Enter current password">
+            <div class="admin-input-wrap">
+              <input type="password" id="pw-current" class="admin-input" autocomplete="off" placeholder="Enter current password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
           </div>
           <div class="admin-field">
             <label for="pw-new">New Password</label>
-            <input type="password" id="pw-new" class="admin-input" minlength="4" autocomplete="off" placeholder="Enter new password">
+            <div class="admin-input-wrap">
+              <input type="password" id="pw-new" class="admin-input" minlength="4" autocomplete="off" placeholder="Enter new password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
           </div>
           <div class="admin-field">
             <label for="pw-confirm">Confirm New Password</label>
-            <input type="password" id="pw-confirm" class="admin-input" minlength="4" autocomplete="off" placeholder="Confirm new password">
+            <div class="admin-input-wrap">
+              <input type="password" id="pw-confirm" class="admin-input" minlength="4" autocomplete="off" placeholder="Confirm new password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
           </div>
           <p id="pw-error" class="admin-error hidden"></p>
           <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt8">Save Changes</button>
@@ -331,6 +343,11 @@
               <span class="admin-toggle-slider"></span>
               <span>Featured</span>
             </label>
+            <label class="admin-toggle">
+              <input type="checkbox" id="field-negotiable" name="field-negotiable">
+              <span class="admin-toggle-slider"></span>
+              <span>Negotiable</span>
+            </label>
           </div>
 
           <input type="hidden" id="field-editing-id" name="field-editing-id" value="">
@@ -362,7 +379,10 @@
           </div>
           <div class="admin-field" id="admin-password-field">
             <label for="admin-modal-password">Password</label>
-            <input type="password" id="admin-modal-password" class="admin-input" autocomplete="off" placeholder="Set a password" required>
+            <div class="admin-input-wrap">
+              <input type="password" id="admin-modal-password" class="admin-input" autocomplete="off" placeholder="Set a password" required>
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
           </div>
           <div class="admin-field">
             <label>Permissions</label>
