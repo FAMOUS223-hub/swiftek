@@ -5,21 +5,42 @@ const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
 
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
+function sendEmail({ to, subject, html }) {
+  return transporter.sendMail({
+    from: process.env.SMTP_FROM,
+    to,
+    subject,
+    html
+  });
+}
+
 const SeedProduct = require('./models/SeedProduct');
 const AdminProduct = require('./models/AdminProduct');
 const DeletedId = require('./models/DeletedId');
 const TrashItem = require('./models/TrashItem');
 const Session = require('./models/Session');
 const Config = require('./models/Config');
+const User = require('./models/User');
+const Order = require('./models/Order');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://nganbewuborijaamos_db_user:mynameis123MASTER@cluster1.hiezajm.mongodb.net/?appName=Cluster1';
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
-
-// ───── Seed products on first run ─────
+app.use(express.static(path.join(__dirname, 'public')));
 
 async function seedProducts() {
   const count = await SeedProduct.countDocuments();
@@ -38,7 +59,19 @@ async function ensureConfig() {
   }
 }
 
-// ───── Products (public) ─────
+async function ensureAdminUser() {
+  const admin = await User.findOne({ role: 'admin' });
+  if (!admin) {
+    await User.create({
+      name: 'Admin',
+      email: 'admin@swiftek.com',
+      password: 'admin',
+      role: 'admin',
+      verified: true
+    });
+    console.log('Admin user created (admin@swiftek.com / admin)');
+  }
+}
 
 async function getStoreProducts() {
   const [seedProducts, adminProducts, deletedDocs] = await Promise.all([
@@ -88,31 +121,11 @@ app.get('/api/stats', async (req, res) => {
   });
 });
 
-// ───── Auth (public) ─────
+// ───── Auth helpers ─────
 
-app.post('/api/auth/login', async (req, res) => {
-  const { password } = req.body;
-  if (!password) return res.status(400).json({ error: 'Password required' });
-
-  const config = await Config.findOne({ key: 'passwordHash' });
-  const hash = crypto.createHash('sha256').update(password).digest('hex');
-  if (hash !== config.value) {
-    return res.status(401).json({ error: 'Invalid password' });
-  }
-
-  const token = crypto.randomBytes(32).toString('hex');
-  await Session.create({ token, createdAt: new Date(), lastUsed: new Date() });
-  res.json({ success: true, token });
-});
-
-app.post('/api/auth/logout', async (req, res) => {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  await Session.deleteOne({ token });
-  res.json({ success: true });
-});
-
-// ───── Auth middleware ─────
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -125,10 +138,540 @@ async function requireAuth(req, res, next) {
   session.lastUsed = new Date();
   await session.save();
   req.session = session;
+  req.userId = session.userId;
+  req.userRole = session.role;
   next();
 }
 
-// ───── Auth-protected endpoints ─────
+async function requireAdmin(req, res, next) {
+  await requireAuth(req, res, () => {
+    if (req.userRole !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+    next();
+  });
+}
+
+// ───── User Auth routes ─────
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existing) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    const verificationToken = generateToken();
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      verificationToken
+    });
+
+    const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
+    console.log(`[VERIFY] ${user.email} -> ${verifyUrl}`);
+
+    res.json({
+      success: true,
+      message: 'Account created! Check your email to verify your account.',
+      verifyUrl
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+app.post('/api/auth/check-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    res.json({ available: !existing });
+  } catch (err) {
+    res.status(500).json({ available: false, error: 'Check failed' });
+  }
+});
+
+app.get('/api/auth/verify/:token', async (req, res) => {
+  try {
+    const user = await User.findOne({ verificationToken: req.params.token });
+    if (!user) {
+      return res.status(400).send(`
+        <html><head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7">
+        <div style="text-align:center;padding:40px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.06)">
+          <div style="font-size:48px;margin-bottom:16px;color:#ff453a;"><i class="fas fa-times-circle"></i></div>
+          <h1 style="font-size:22px;margin-bottom:8px">Verification Failed</h1>
+          <p style="color:#6e6e73">Invalid or expired verification link.</p>
+          <a href="/signup.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#0071e3;color:#fff;border-radius:99px;text-decoration:none">Log In</a>
+        </div></body></html>
+      `);
+    }
+
+    user.verified = true;
+    user.verificationToken = null;
+    await user.save();
+
+    res.send(`
+      <html><head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7">
+      <div style="text-align:center;padding:40px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.06)">
+        <div style="font-size:48px;margin-bottom:16px;color:#30d158;"><i class="fas fa-check-circle"></i></div>
+        <h1 style="font-size:22px;margin-bottom:8px">Email Verified!</h1>
+        <p style="color:#6e6e73">Your account is now active. You can log in.</p>
+        <a href="/login.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#0071e3;color:#fff;border-radius:99px;text-decoration:none">Log In</a>
+      </div></body></html>
+    `);
+  } catch (err) {
+    res.status(500).send('Verification failed');
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'Your account has been suspended. Contact support for assistance.' });
+    }
+
+    if (user.status === 'revoked') {
+      return res.status(403).json({ error: 'Your account has been revoked. Contact support for assistance.' });
+    }
+
+    if (!user.verified) {
+      return res.status(403).json({ error: 'Please verify your email before logging in' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const token = generateToken();
+    await Session.create({
+      token,
+      userId: user._id,
+      role: user.role,
+      createdAt: new Date(),
+      lastUsed: new Date()
+    });
+
+    res.json({
+      success: true,
+      token,
+      role: user.role,
+      user: { id: user._id, name: user.name, email: user.email }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  await Session.deleteOne({ token });
+  res.json({ success: true });
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.json({ success: true, message: 'If that email exists, an OTP has been sent.' });
+    }
+
+    if (user.resetOtpSentAt && (Date.now() - new Date(user.resetOtpSentAt).getTime()) < 120000) {
+      const remaining = Math.ceil((120000 - (Date.now() - new Date(user.resetOtpSentAt).getTime())) / 1000);
+      return res.status(429).json({ error: `Please wait ${remaining}s before requesting a new OTP.` });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    user.resetOtp = otp;
+    user.resetOtpExpires = new Date(Date.now() + 1800000);
+    user.resetOtpSentAt = new Date();
+    await user.save();
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;">
+          <tr>
+            <td align="center" style="padding:40px 16px;">
+              <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
+                <tr>
+                  <td style="background:#ffffff;border-radius:16px;padding:40px 32px 32px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+
+                    <!-- Logo / Brand -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+                      <tr>
+                        <td align="center">
+                          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 8px;">
+                            <tr>
+                              <td align="center" style="width:48px;height:48px;background:#0071e3;border-radius:14px;font-size:24px;font-weight:700;color:#ffffff;line-height:48px;">S</td>
+                            </tr>
+                          </table>
+                          <p style="font-size:18px;font-weight:700;color:#1d1d1f;margin:0;letter-spacing:-0.3px;">Swif<span style="color:#0071e3;">Tek</span> Accessories</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Heading -->
+                    <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.3px;">Reset your password</h1>
+                    <p style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.5;">Hi ${user.name},<br>enter the code below to reset your <strong>SwifTek Accessories</strong> account password.</p>
+
+                    <!-- OTP Box -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;background:#f5f5f7;border-radius:14px;width:100%;">
+                      <tr>
+                        <td align="center" style="padding:24px 16px;letter-spacing:10px;font-size:38px;font-weight:700;color:#1d1d1f;">${otp.split('').join(' ')}</td>
+                      </tr>
+                    </table>
+
+                    <!-- Expiry -->
+                    <p style="font-size:14px;color:#8e8e93;margin:0 0 28px;line-height:1.5;">This code expires in <strong style="color:#1d1d1f;">30 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>
+
+                    <!-- Divider -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+                      <tr>
+                        <td style="border-bottom:1px solid #e8e8ed;margin:0;padding:0;line-height:1px;height:1px;">&nbsp;</td>
+                      </tr>
+                    </table>
+
+                    <!-- Footer -->
+                    <p style="font-size:13px;color:#8e8e93;margin:24px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span style="color:#aeaeb2;">Built by Famous Tech</span></p>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Reset your password — SwifTek Accessories',
+      html: emailHtml
+    });
+
+    console.log('[EMAIL] OTP sent to', user.email);
+
+    res.json({
+      success: true,
+      message: 'If that email exists, an OTP has been sent.'
+    });
+  } catch (err) {
+    console.error('[FORGOT-PASSWORD ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+app.post('/api/auth/verify-reset-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(400).json({ error: 'No reset request found for this email.' });
+    }
+
+    if (!user.resetOtp || !user.resetOtpExpires) {
+      return res.status(400).json({ error: 'No OTP has been requested. Please request a new one.' });
+    }
+
+    if (new Date() > user.resetOtpExpires) {
+      user.resetOtp = null;
+      user.resetOtpExpires = null;
+      await user.save();
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (user.resetOtp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP. Please check and try again.' });
+    }
+
+    const resetToken = generateToken();
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + 300000);
+    user.resetOtp = null;
+    user.resetOtpExpires = null;
+    await user.save();
+
+    res.json({ success: true, resetToken });
+  } catch (err) {
+    console.error('[VERIFY-OTP ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token) return res.status(400).json({ error: 'Reset token is required' });
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token. Please start over.' });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    await Session.deleteMany({ userId: user._id });
+
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  const user = await User.findById(req.userId).select('name email role status verified');
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.status === 'suspended') {
+    return res.status(403).json({ error: 'Your account has been suspended. Contact support for assistance.' });
+  }
+  if (user.status === 'revoked') {
+    return res.status(403).json({ error: 'Your account has been revoked. Contact support for assistance.' });
+  }
+  res.json(user);
+});
+
+// ───── Legacy Admin Auth (backward compatible) ─────
+
+app.post('/api/auth/admin-login', async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required' });
+
+  const config = await Config.findOne({ key: 'passwordHash' });
+  const hash = crypto.createHash('sha256').update(password).digest('hex');
+  if (hash !== config.value) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+
+  const token = generateToken();
+
+  // Associate with admin user so profile endpoints work
+  const adminUser = await User.findOne({ role: 'admin' });
+  if (adminUser) {
+    await Session.create({ token, userId: adminUser._id, role: 'admin', createdAt: new Date(), lastUsed: new Date() });
+  } else {
+    await Session.create({ token, createdAt: new Date(), lastUsed: new Date() });
+  }
+
+  res.json({ success: true, token });
+});
+
+// ───── Profile update ─────
+
+app.patch('/api/auth/profile', requireAuth, async (req, res) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (name !== undefined) {
+      if (!name.trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+      user.name = name.trim();
+    }
+
+    if (email !== undefined) {
+      const normalized = email.toLowerCase().trim();
+      if (!normalized) return res.status(400).json({ error: 'Email cannot be empty' });
+      const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+      if (existing) return res.status(400).json({ error: 'Email already in use' });
+      user.email = normalized;
+    }
+
+    if (newPassword) {
+      if (!currentPassword) return res.status(400).json({ error: 'Current password required to set new password' });
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) return res.status(401).json({ error: 'Current password is incorrect' });
+      if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      user.password = newPassword;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+    });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ error: 'Email already in use' });
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// ───── Orders ─────
+
+app.post('/api/orders', requireAuth, async (req, res) => {
+  try {
+    const { items, total, customerInfo, recipient } = req.body;
+    if (!items || !items.length) {
+      return res.status(400).json({ error: 'Order must contain items' });
+    }
+
+    const orderRef = `SWF-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
+
+    const order = await Order.create({
+      userId: req.userId,
+      orderRef,
+      items,
+      total,
+      customerInfo: customerInfo || {},
+      recipient: recipient || {},
+      status: 'pending'
+    });
+
+    res.json({ success: true, orderRef: order.orderRef, orderId: order._id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+app.get('/api/orders', requireAuth, async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 }).lean();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  try {
+    const orders = await Order.find().populate('userId', 'name email').sort({ createdAt: -1 }).lean();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    await Order.findByIdAndUpdate(req.params.id, { status });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// ───── Admin Users ─────
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password -verificationToken').sort({ createdAt: -1 }).lean();
+    const userOrderCounts = await Order.aggregate([
+      { $group: { _id: '$userId', orderCount: { $sum: 1 }, totalSpent: { $sum: '$total' } } }
+    ]);
+    const countMap = {};
+    userOrderCounts.forEach(u => { countMap[u._id.toString()] = { orderCount: u.orderCount, totalSpent: u.totalSpent }; });
+
+    const result = users.map(u => ({
+      ...u,
+      orderCount: countMap[u._id.toString()]?.orderCount || 0,
+      totalSpent: countMap[u._id.toString()]?.totalSpent || 0
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.get('/api/admin/users/:id/orders', requireAdmin, async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.params.id }).sort({ createdAt: -1 }).lean();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user orders' });
+  }
+});
+
+app.patch('/api/admin/users/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['active', 'suspended', 'revoked'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be active, suspended, or revoked.' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const now = new Date();
+    if (status === 'suspended') user.suspendedAt = now;
+    else if (status === 'revoked') user.revokedAt = now;
+    else {
+      user.suspendedAt = null;
+      user.revokedAt = null;
+    }
+    user.status = status;
+    await user.save();
+
+    res.json({ success: true, message: `User ${status} successfully` });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user._id.toString() === req.userId.toString()) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    await Order.deleteMany({ userId: user._id });
+    await User.findByIdAndDelete(user._id);
+
+    res.json({ success: true, message: 'User and all associated orders deleted permanently' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ───── Auth-protected endpoints (legacy admin) ─────
 
 app.get('/api/trash', requireAuth, async (req, res) => {
   res.json(await TrashItem.find().lean());
@@ -241,6 +784,7 @@ async function start() {
     console.log('Connected to MongoDB');
     await seedProducts();
     await ensureConfig();
+    await ensureAdminUser();
     app.listen(PORT, () => {
       console.log(`SwifTek server running at http://localhost:${PORT}`);
     });

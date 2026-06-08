@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — SwifTek Accessories</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="auth-video-page">
+
+  <video class="auth-video-bg" autoplay muted loop playsinline preload="auto">
+    <source src="https://www.apple.com/105/media/us/iphone-16-pro/2024/3616fe73-ad74-4b7f-8b93-a4c0f0b6a2d7/anim/highlights-apple-intellegence/large_2x.mp4" type="video/mp4">
+  </video>
+  <div class="auth-video-overlay"></div>
+
+  <header class="header auth-video-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+      </a>
+      <div class="header-actions">
+        <a href="signup.html" class="header-action-btn" aria-label="Sign up" title="Sign up"><i class="fas fa-user-plus"></i></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page auth-page-video">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="logo-icon">S</span>
+      </div>
+      <h1>Welcome Back</h1>
+      <p class="auth-desc">Sign in to your account</p>
+
+      <form id="login-form">
+        <div class="auth-field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="auth-input" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+        <p id="login-error" class="auth-error hidden"></p>
+        <button type="submit" class="auth-btn">Sign In</button>
+        <p class="text-center mt-12"><a href="forgot-password.html" class="forgot-link">Forgot password?</a></p>
+      </form>
+
+      <p class="auth-alt">Don't have an account? <a href="signup.html">Sign up</a></p>
+    </div>
+  </main>
+
+  <footer class="footer auth-footer-video">
+    <div class="footer-bottom">
+      <span>&copy; 2026 SwifTek. All rights reserved.</span>
+      <span>Built with <i class="fas fa-heart heart-icon"></i> by Famous Tech</span>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem('swiftek_theme');
+      if (saved === 'dark') document.body.classList.add('dark-theme');
+    }
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.querySelectorAll('.cart-count').forEach(el => {
+        el.textContent = count;
+        el.style.display = count > 0 ? 'flex' : 'none';
+      });
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+
+      try {
+        const result = await userLoginApi(email, password);
+        if (result.role === 'admin') {
+          window.location.href = 'admin.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    initTheme();
+    updateCartCount();
+  </script>
+</body>
+</html>

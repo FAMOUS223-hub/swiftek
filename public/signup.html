@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — SwifTek Accessories</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="auth-video-page">
+
+  <video class="auth-video-bg" autoplay muted loop playsinline preload="auto">
+    <source src="https://www.apple.com/105/media/us/iphone-16-pro/2024/77d87f1f-88e4-4527-8394-310f47f367eb/anim/hero/large_2x.mp4" type="video/mp4">
+  </video>
+  <div class="auth-video-overlay"></div>
+
+  <header class="header auth-video-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+      </a>
+      <div class="header-actions">
+        <a href="login.html" class="header-action-btn" aria-label="Sign in" title="Sign in"><i class="fas fa-sign-in-alt"></i></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-page auth-page-video">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="logo-icon">S</span>
+      </div>
+      <h1>Create Account</h1>
+      <p class="auth-desc">Join SwifTek Accessories today</p>
+
+      <form id="signup-form">
+        <div class="auth-field">
+          <label for="signup-name">Full Name</label>
+          <input type="text" id="signup-name" class="auth-input" placeholder="Your full name" required autocomplete="name">
+        </div>
+        <div class="auth-field auth-field-email">
+          <label for="signup-email">Email</label>
+          <div class="auth-input-wrap">
+            <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
+            <span id="email-status" class="auth-input-icon"></span>
+          </div>
+          <p id="email-helper" class="auth-helper hidden"></p>
+        </div>
+        <div class="auth-field">
+          <label for="signup-password">Password</label>
+          <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="auth-field">
+          <label for="signup-confirm">Confirm Password</label>
+          <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
+        </div>
+        <p id="signup-error" class="auth-error hidden"></p>
+        <p id="signup-success" class="auth-success hidden"></p>
+        <button type="submit" class="auth-btn">Create Account</button>
+      </form>
+
+      <p class="auth-alt">Already have an account? <a href="login.html">Sign in</a></p>
+    </div>
+  </main>
+
+  <footer class="footer auth-footer-video">
+    <div class="footer-bottom">
+      <span>&copy; 2026 SwifTek. All rights reserved.</span>
+      <span>Built with <i class="fas fa-heart heart-icon"></i> by Famous Tech</span>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem('swiftek_theme');
+      if (saved === 'dark') document.body.classList.add('dark-theme');
+    }
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.querySelectorAll('.cart-count').forEach(el => {
+        el.textContent = count;
+        el.style.display = count > 0 ? 'flex' : 'none';
+      });
+    }
+
+    /* ───── Real-time email check ───── */
+    let emailAvailable = false;
+    let emailCheckTimeout = null;
+
+    const emailInput = document.getElementById('signup-email');
+    const emailStatus = document.getElementById('email-status');
+    const emailHelper = document.getElementById('email-helper');
+
+    emailInput.addEventListener('input', () => {
+      clearTimeout(emailCheckTimeout);
+      const val = emailInput.value.trim();
+
+      emailStatus.className = 'auth-input-icon';
+      emailHelper.classList.add('hidden');
+      emailInput.classList.remove('input-invalid', 'input-valid');
+      emailAvailable = false;
+
+      if (!val) return;
+
+      if (!emailInput.validity.valid) {
+        emailStatus.innerHTML = '<i class="fas fa-times-circle icon-invalid"></i>';
+        emailHelper.textContent = 'Please enter a valid email address';
+        emailHelper.className = 'auth-helper auth-helper-error';
+        emailInput.classList.add('input-invalid');
+        return;
+      }
+
+        emailStatus.innerHTML = '<i class="fas fa-spinner fa-spin icon-loading"></i>';
+
+      emailCheckTimeout = setTimeout(async () => {
+        try {
+          const result = await checkEmailApi(val);
+          if (result.available) {
+            emailStatus.innerHTML = '<i class="fas fa-check-circle icon-valid"></i>';
+            emailInput.classList.add('input-valid');
+            emailAvailable = true;
+          } else {
+            emailStatus.innerHTML = '<i class="fas fa-times-circle icon-invalid"></i>';
+            emailHelper.textContent = 'This email is already registered';
+            emailHelper.className = 'auth-helper auth-helper-error';
+            emailInput.classList.add('input-invalid');
+          }
+        } catch {
+          emailStatus.innerHTML = '';
+        }
+      }, 400);
+    });
+
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signup-name').value.trim();
+      const email = emailInput.value.trim();
+      const password = document.getElementById('signup-password').value;
+      const confirm = document.getElementById('signup-confirm').value;
+      const errorEl = document.getElementById('signup-error');
+      const successEl = document.getElementById('signup-success');
+
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
+
+      if (!emailAvailable) {
+        errorEl.textContent = 'Please use a different email address';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      if (password !== confirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const result = await registerApi(name, email, password);
+        successEl.innerHTML = result.verifyUrl
+          ? `Account created! <a href="${result.verifyUrl}" class="text-accent">Click here to verify your email</a> (Development mode)`
+          : result.message;
+        successEl.classList.remove('hidden');
+        document.getElementById('signup-form').querySelector('button').disabled = true;
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    initTheme();
+    updateCartCount();
+  </script>
+</body>
+</html>

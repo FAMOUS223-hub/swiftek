@@ -41,10 +41,17 @@
       </div>
       <h1>Admin Login</h1>
       <p class="admin-login-desc">Enter password to access the dashboard</p>
-      <form id="login-form">
-        <input type="password" id="admin-password" class="admin-input" placeholder="Password" autocomplete="off">
+      <form id="admin-login-form">
+        <div class="admin-field">
+          <label for="admin-email">Email</label>
+          <input type="email" id="admin-email" class="admin-input" placeholder="admin@swiftek.com" autocomplete="email">
+        </div>
+        <div class="admin-field">
+          <label for="admin-password">Password</label>
+          <input type="password" id="admin-password" class="admin-input" placeholder="Enter your password" autocomplete="current-password">
+        </div>
         <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt12">Login</button>
-        <p id="login-error" class="admin-error hidden">Invalid password</p>
+        <p id="login-error" class="admin-error hidden">Invalid email or password</p>
       </form>
     </div>
   </div>
@@ -75,15 +82,15 @@
     <!-- Stats & Content -->
     <div class="container admin-dashboard-main">
       <div class="admin-stats">
-        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-prod-section')?.classList.add('hidden');document.getElementById('trash-section')?.classList.add('hidden');document.getElementById('admin-product-list')?.style.removeProperty('display');document.getElementById('admin-search')?.focus();">
+        <div class="admin-stat-card clickable" data-section="main">
           <div class="admin-stat-num" id="stat-total">0</div>
           <div class="admin-stat-label">Total Products</div>
         </div>
-        <div class="admin-stat-card clickable" onclick="document.getElementById('admin-prod-btn')?.click();">
+        <div class="admin-stat-card clickable" data-section="admin-prod">
           <div class="admin-stat-num" id="stat-admin">0</div>
           <div class="admin-stat-label">Admin Products</div>
         </div>
-        <div class="admin-stat-card clickable" onclick="document.getElementById('trash-btn')?.click()">
+        <div class="admin-stat-card clickable" data-section="trash">
           <div class="admin-stat-num" id="stat-trash">0</div>
           <div class="admin-stat-label">In Trash</div>
         </div>
@@ -91,9 +98,12 @@
 
       <!-- Controls -->
       <div class="admin-controls">
-        <button id="admin-prod-btn" class="admin-btn admin-btn-outline"><i class="fas fa-box"></i> Products</button>
-        <button id="trash-btn" class="admin-btn admin-btn-outline"><i class="fas fa-trash"></i> Trash</button>
-        <button id="settings-btn" class="admin-btn admin-btn-outline"><i class="fas fa-cog"></i> Settings</button>
+        <button id="admin-prod-btn" class="admin-btn admin-btn-outline" data-section="admin-prod"><i class="fas fa-box"></i> Products</button>
+        <button id="users-btn" class="admin-btn admin-btn-outline" data-section="users"><i class="fas fa-users"></i> Users</button>
+        <button id="user-orders-btn" class="admin-btn admin-btn-outline" data-section="user-orders"><i class="fas fa-user-tag"></i> User Orders</button>
+        <button id="orders-btn" class="admin-btn admin-btn-outline" data-section="orders"><i class="fas fa-truck"></i> Orders</button>
+        <button id="trash-btn" class="admin-btn admin-btn-outline" data-section="trash"><i class="fas fa-trash"></i> Trash</button>
+        <button id="settings-btn" class="admin-btn admin-btn-outline" data-section="settings"><i class="fas fa-cog"></i> Settings</button>
         <input type="text" id="admin-search" class="admin-input admin-input-search" placeholder="Search products...">
       </div>
 
@@ -114,6 +124,27 @@
         <div id="trash-list" class="admin-product-list"></div>
       </div>
 
+      <!-- Users -->
+      <div id="users-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-users"></i> Users</h2>
+        <p class="admin-section-desc">Manage user accounts — suspend, revoke, or delete users.</p>
+        <div id="users-list" class="admin-product-list"></div>
+      </div>
+
+      <!-- User Orders -->
+      <div id="user-orders-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-user-tag"></i> User Orders</h2>
+        <p class="admin-section-desc">Browse orders placed by each user.</p>
+        <div id="user-orders-list" class="admin-product-list"></div>
+      </div>
+
+      <!-- Orders -->
+      <div id="orders-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-truck"></i> All Orders</h2>
+        <p class="admin-section-desc">Track and manage all customer orders.</p>
+        <div id="orders-list-admin" class="admin-product-list"></div>
+      </div>
+
       <!-- Settings -->
       <div id="settings-section" class="hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-cog"></i> Settings</h2>
@@ -128,7 +159,7 @@
   <footer class="footer admin-footer">
     <div class="footer-bottom">
       <span>&copy; 2026 SwifTek. All rights reserved.</span>
-      <span>Built with 🤍 by Famous Tech</span>
+      <span>Built with <i class="fas fa-heart heart-icon"></i> by Famous Tech</span>
     </div>
   </footer>
 
@@ -139,22 +170,31 @@
         <h3><i class="fas fa-cog"></i> Settings</h3>
       </div>
       <div class="custom-modal-body">
-        <div class="admin-section-label admin-pw-label"><i class="fas fa-key"></i> Change Password</div>
-        <form id="password-form">
+        <div class="admin-section-label"><i class="fas fa-user"></i> Profile</div>
+        <form id="profile-form">
+          <div class="admin-field">
+            <label for="prof-name">Name</label>
+            <input type="text" id="prof-name" class="admin-input" autocomplete="off" placeholder="Your name">
+          </div>
+          <div class="admin-field">
+            <label for="prof-email">Email</label>
+            <input type="email" id="prof-email" class="admin-input" autocomplete="off" placeholder="Your email">
+          </div>
+          <div class="admin-section-label mt-16"><i class="fas fa-key"></i> Change Password <span class="fw-normal text-muted text-sm">(leave blank to keep current)</span></div>
           <div class="admin-field">
             <label for="pw-current">Current Password</label>
-            <input type="password" id="pw-current" class="admin-input" required autocomplete="off" placeholder="Enter current password">
+            <input type="password" id="pw-current" class="admin-input" autocomplete="off" placeholder="Enter current password">
           </div>
           <div class="admin-field">
             <label for="pw-new">New Password</label>
-            <input type="password" id="pw-new" class="admin-input" required minlength="4" autocomplete="off" placeholder="Enter new password">
+            <input type="password" id="pw-new" class="admin-input" minlength="4" autocomplete="off" placeholder="Enter new password">
           </div>
           <div class="admin-field">
             <label for="pw-confirm">Confirm New Password</label>
-            <input type="password" id="pw-confirm" class="admin-input" required minlength="4" autocomplete="off" placeholder="Confirm new password">
+            <input type="password" id="pw-confirm" class="admin-input" minlength="4" autocomplete="off" placeholder="Confirm new password">
           </div>
           <p id="pw-error" class="admin-error hidden"></p>
-          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt8">Update Password</button>
+          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt8">Save Changes</button>
         </form>
       </div>
       <div class="custom-modal-footer">

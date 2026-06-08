@@ -142,10 +142,30 @@ function showToast(message) {
   }, 2600);
 }
 
+function getUserData() {
+  try { return JSON.parse(localStorage.getItem('swiftek_user_data') || 'null'); } catch(e) { return null; }
+}
+
 function checkoutWhatsApp() {
   if (cart.length === 0) {
     showToast('Your cart is empty!');
     return;
+  }
+
+  const token = getUserToken ? getUserToken() : null;
+  const userData = getUserData();
+  if (!token || !userData) {
+    showToast('Please login to place an order');
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    return;
+  }
+
+  if (typeof fetchMe === 'function') {
+    fetchMe().catch(() => {
+      showToast('Session expired or account access revoked');
+      clearUserSession();
+      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    });
   }
 
   const total = getCartTotal();
@@ -153,6 +173,10 @@ function checkoutWhatsApp() {
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit', hour12: true });
   const orderRef = `SWF-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+
+  const recipientName = document.getElementById('checkout-recipient-name')?.value.trim() || userData.name;
+  const deliveryAddress = document.getElementById('checkout-address')?.value.trim() || '';
+  const isDifferent = document.getElementById('checkout-different')?.checked || false;
 
   let message = `┌──────────────────────────────────────────%0A`;
   message += `│  🛍️  *NEW ORDER — SwifTek Accessories*%0A`;
@@ -174,18 +198,19 @@ function checkoutWhatsApp() {
     return msg;
   });
 
-  Promise.all(promises).then(items => {
+  Promise.all(promises).then(async (items) => {
     message += items.join('');
     message += `%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A`;
     message += `*💰  TOTAL AMOUNT  ${formatPrice(total)}*%0A`;
     message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A`;
 
-    message += `*👤 CUSTOMER INFO*%0A`;
-    message += `Please provide your full name and delivery address so we can process your order.%0A%0A`;
+    message += `*👤 ACCOUNT HOLDER*%0A`;
+    message += `Name: ${escapeHtml(userData.name)}%0A`;
+    message += `Email: ${escapeHtml(userData.email)}%0A%0A`;
 
-    message += `*📦 DELIVERY DETAILS*%0A`;
-    message += `📍 Delivery: *Accra, Ghana* (or specify your location)%0A`;
-    message += `⏱️ Estimated: 1–3 business days%0A%0A`;
+    message += `*📦 DELIVERY*%0A`;
+    message += `Recipient: ${escapeHtml(recipientName)}%0A`;
+    message += `Address: ${deliveryAddress ? escapeHtml(deliveryAddress) : 'To be provided'}%0A%0A`;
 
     message += `*💳 PAYMENT*%0A`;
     message += `Pay on delivery (Cash / Mobile Money) or bank transfer.%0A%0A`;
@@ -194,6 +219,34 @@ function checkoutWhatsApp() {
     message += `*SwifTek Accessories* — Premium Tech Store 🇬🇭%0A`;
     message += `📞 ${WHATSAPP_NUMBER}%0A`;
     message += `Thank you for your order! 🙏`;
+
+    if (typeof createOrderApi === 'function') {
+      const orderItems = await Promise.all(cart.map(async (item) => {
+        const product = await getProductById(item.productId);
+        return {
+          productId: item.productId,
+          name: product ? product.name : 'Unknown Product',
+          price: item.price,
+          qty: item.qty,
+          specs: item.specs || '',
+          image: product && product.images ? product.images[0] : ''
+        };
+      }));
+
+      try {
+        await createOrderApi({
+          items: orderItems,
+          total,
+          customerInfo: {
+            name: userData.name,
+            email: userData.email
+          },
+          recipient: isDifferent ? { name: recipientName, address: deliveryAddress } : {}
+        });
+      } catch (e) {
+        console.error('Failed to save order:', e);
+      }
+    }
 
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
     clearCart();
@@ -257,6 +310,9 @@ async function renderCart() {
   const countLabel = document.querySelector('.cart-count-label');
 
   if (!container) return;
+
+  const skeletonEl = document.getElementById('cart-skeleton');
+  if (skeletonEl) skeletonEl.remove();
 
   if (cart.length === 0) {
     container.innerHTML = '';
@@ -460,6 +516,10 @@ async function renderProductDetail() {
 
   const contentEl = document.getElementById('product-detail-content');
   if (!contentEl) return;
+
+  const skeletonEl = document.getElementById('product-skeleton');
+  if (skeletonEl) skeletonEl.remove();
+  contentEl.classList.remove('hidden');
 
   const pName = escapeHtml(product.name);
   const pBrand = escapeHtml(product.brand);
@@ -705,9 +765,187 @@ document.addEventListener('click', (e) => {
   item.classList.toggle('open', !isOpen);
 });
 
+/* ───── Profile Edit Modal ───── */
+
+function showUserProfileModal() {
+  const existing = document.querySelector('.profile-modal-overlay');
+  if (existing) existing.remove();
+
+  const userData = getUserData();
+  const overlay = document.createElement('div');
+  overlay.className = 'profile-modal-overlay custom-modal-overlay';
+  overlay.innerHTML = `
+    <div class="custom-modal modal-profile">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-user-edit"></i> Edit Profile</h3>
+      </div>
+      <div class="custom-modal-body">
+        <form id="profile-edit-form">
+          <div class="admin-field">
+            <label for="pe-name">Name</label>
+            <input type="text" id="pe-name" class="admin-input" value="${escapeHtml(userData ? userData.name : '')}" autocomplete="off" placeholder="Your name">
+          </div>
+          <div class="admin-field">
+            <label for="pe-email">Email</label>
+            <input type="email" id="pe-email" class="admin-input" value="${escapeHtml(userData ? userData.email : '')}" autocomplete="off" placeholder="Your email">
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border-light);margin:16px 0;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;">Change Password <span style="font-weight:400;">(leave blank to keep current)</span></label>
+          <div class="admin-field">
+            <label for="pe-current-pw">Current Password</label>
+            <input type="password" id="pe-current-pw" class="admin-input" autocomplete="off" placeholder="Current password">
+          </div>
+          <div class="admin-field">
+            <label for="pe-new-pw">New Password</label>
+            <input type="password" id="pe-new-pw" class="admin-input" minlength="6" autocomplete="off" placeholder="New password">
+          </div>
+          <div class="admin-field">
+            <label for="pe-confirm-pw">Confirm New Password</label>
+            <input type="password" id="pe-confirm-pw" class="admin-input" minlength="6" autocomplete="off" placeholder="Confirm new password">
+          </div>
+          <p id="pe-error" class="admin-error hidden"></p>
+          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt8">Save Changes</button>
+        </form>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" id="pe-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('profile-edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('pe-name').value.trim();
+    const email = document.getElementById('pe-email').value.trim();
+    const currentPw = document.getElementById('pe-current-pw').value;
+    const newPw = document.getElementById('pe-new-pw').value;
+    const confirmPw = document.getElementById('pe-confirm-pw').value;
+    const errorEl = document.getElementById('pe-error');
+
+    if (newPw && newPw !== confirmPw) {
+      errorEl.textContent = 'New passwords do not match';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (newPw && newPw.length < 6) {
+      errorEl.textContent = 'Password must be at least 6 characters';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const result = await updateProfileApi({
+        name: name || undefined,
+        email: email || undefined,
+        currentPassword: newPw ? currentPw : undefined,
+        newPassword: newPw || undefined
+      });
+      if (result.user) {
+        localStorage.setItem('swiftek_user_data', JSON.stringify(result.user));
+      }
+      overlay.remove();
+      showToast('Profile updated successfully');
+      updateHeaderUser();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('pe-cancel').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+/* ───── Cart helpers ───── */
+
+function toggleRecipientFields() {
+  const checked = document.getElementById('checkout-different')?.checked;
+  const fields = document.getElementById('checkout-recipient-fields');
+  if (fields) fields.classList.toggle('hidden', !checked);
+}
+
+function updateCheckoutUserInfo() {
+  const info = document.getElementById('checkout-user-info');
+  const name = document.getElementById('checkout-user-name');
+  const email = document.getElementById('checkout-user-email');
+  if (!info || !name || !email) return;
+  const userData = getUserData();
+  if (userData && userData.name) {
+    info.classList.remove('hidden');
+    name.textContent = userData.name;
+    email.textContent = userData.email;
+  } else {
+    info.classList.add('hidden');
+  }
+}
+
+function updateHeaderUser() {
+  const btn = document.getElementById('header-user-btn');
+  if (!btn) return;
+  const token = getUserToken ? getUserToken() : null;
+  const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || 'null'); } catch(e) { return null; } })();
+  if (token && userData) {
+    if (userData.role === 'admin') {
+      btn.innerHTML = '<i class="fas fa-user-shield"></i>';
+      btn.title = 'Admin Panel';
+      btn.href = 'admin.html';
+      btn.onclick = null;
+    } else {
+      btn.innerHTML = '<i class="fas fa-user-check"></i>';
+      btn.title = userData.name || 'Account';
+      btn.href = '#';
+      btn.onclick = function(e) {
+        e.preventDefault();
+        const existing = document.querySelector('.user-dropdown');
+        if (existing) {
+          existing.remove();
+          return;
+        }
+        const div = document.createElement('div');
+        div.className = 'user-dropdown';
+        div.innerHTML = `
+          <div class="user-dropdown-header">
+            <div style="font-weight:700;font-size:14px;">${escapeHtml(userData.name)}</div>
+            <div style="font-size:11px;color:var(--text-tertiary);font-weight:400;">${escapeHtml(userData.email)}</div>
+          </div>
+          <a href="#" id="user-edit-profile-link"><i class="fas fa-user-edit"></i> Edit Profile</a>
+          <a href="order-history.html"><i class="fas fa-box"></i> Order History</a>
+          <a href="#" id="user-logout-link"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+        `;
+        btn.parentElement.style.position = 'relative';
+        btn.parentElement.appendChild(div);
+        document.getElementById('user-logout-link').addEventListener('click', async (e2) => {
+          e2.preventDefault();
+          if (typeof userLogoutApi === 'function') await userLogoutApi().catch(() => {});
+          div.remove();
+          window.location.reload();
+        });
+        document.getElementById('user-edit-profile-link').addEventListener('click', (e2) => {
+          e2.preventDefault();
+          div.remove();
+          showUserProfileModal();
+        });
+        document.addEventListener('click', function closeDropdown(e2) {
+          if (!e2.target.closest('.header-actions')) {
+            div.remove();
+            document.removeEventListener('click', closeDropdown);
+          }
+        });
+      };
+    }
+  } else {
+    btn.innerHTML = '<i class="fas fa-user"></i>';
+    btn.title = 'Sign In';
+    btn.href = 'login.html';
+    btn.onclick = null;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   updateCartCount();
+  updateHeaderUser();
 
   if (document.getElementById('products-grid')) {
     const params = new URLSearchParams(window.location.search);
@@ -747,6 +985,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (document.querySelector('.cart-items')) {
     await renderCart();
+    updateCheckoutUserInfo();
   }
 
   initSidebar();

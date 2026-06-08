@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order History — SwifTek Accessories</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="announcement">
+    <strong>🇬🇭 Delivering across Ghana</strong>
+  </div>
+
+  <header class="header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+      </a>
+      <div class="header-actions">
+        <button class="header-action-btn theme-toggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+        <a href="cart.html" class="header-action-btn" aria-label="Cart">
+          🛒 <span class="cart-badge cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="orders-page container">
+    <div class="orders-head">
+      <h1>Order History</h1>
+      <a href="index.html" class="btn btn-primary">← Back to Store</a>
+    </div>
+
+    <div id="orders-login-prompt" class="orders-login-prompt hidden">
+      <div class="no-results">
+        <div class="icon">👤</div>
+        <h3>Sign in to view your orders</h3>
+        <p>You need to be logged in to see your order history.</p>
+        <a href="login.html" class="btn btn-primary d-inline-flex mt-16">Sign In</a>
+      </div>
+    </div>
+
+    <div id="orders-empty" class="orders-empty hidden">
+      <div class="no-results">
+        <div class="icon">📦</div>
+        <h3>No orders yet</h3>
+        <p>When you place an order, it will appear here.</p>
+        <a href="index.html" class="btn btn-primary d-inline-flex mt-16">Start Shopping</a>
+      </div>
+    </div>
+
+    <div id="orders-list" class="orders-list"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-bottom">
+      <span>&copy; 2026 SwifTek. All rights reserved.</span>
+      <span>Built with 🤍 by Famous Tech</span>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script>
+    function initTheme() {
+      const saved = localStorage.getItem('swiftek_theme');
+      if (saved === 'dark') document.body.classList.add('dark-theme');
+      document.querySelectorAll('.theme-toggle').forEach(btn => {
+        btn.innerHTML = saved === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        btn.addEventListener('click', () => {
+          document.body.classList.toggle('dark-theme');
+          const isDark = document.body.classList.contains('dark-theme');
+          localStorage.setItem('swiftek_theme', isDark ? 'dark' : 'light');
+          document.querySelectorAll('.theme-toggle').forEach(b => {
+            b.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+          });
+        });
+      });
+    }
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.querySelectorAll('.cart-count').forEach(el => {
+        el.textContent = count;
+        el.style.display = count > 0 ? 'flex' : 'none';
+      });
+    }
+
+    function formatPrice(price) {
+      return `GH₵ ${Number(price).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function getStatusBadge(status) {
+      const colors = { pending: '#ff9f0a', confirmed: '#0071e3', shipped: '#30d158', delivered: '#30d158', cancelled: '#ff453a' };
+      return `<span class="status-badge" style="background:${colors[status] || '#86868b'}">${status}</span>`;
+    }
+
+    async function loadOrders() {
+      const token = getUserToken();
+      const loginPrompt = document.getElementById('orders-login-prompt');
+      const emptyEl = document.getElementById('orders-empty');
+      const listEl = document.getElementById('orders-list');
+
+      if (!token) {
+        loginPrompt.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const orders = await fetchUserOrders();
+        if (!orders || orders.length === 0) {
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        listEl.innerHTML = orders.map(order => `
+          <div class="order-card">
+            <div class="order-card-header">
+              <div>
+                <span class="order-ref">${escapeHtml(order.orderRef)}</span>
+                ${getStatusBadge(order.status)}
+              </div>
+              <span class="order-date">${new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div class="order-card-items">
+              ${order.items.map(item => `
+                <div class="order-item">
+                  ${item.image ? `<img src="${item.image}" alt="" class="order-item-img" onerror="this.style.display='none'">` : ''}
+                  <div class="order-item-info">
+                    <div class="order-item-name">${escapeHtml(item.name)}</div>
+                    ${item.specs ? `<div class="order-item-specs">${escapeHtml(item.specs)}</div>` : ''}
+                    <div class="order-item-qty">Qty: ${item.qty} × ${formatPrice(item.price)}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="order-card-footer">
+              <span class="order-total">Total: ${formatPrice(order.total)}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        if (err.message.includes('Session expired') || err.message.includes('Authentication')) {
+          clearUserSession();
+          loginPrompt.classList.remove('hidden');
+        }
+      }
+    }
+
+    initTheme();
+    updateCartCount();
+    loadOrders();
+  </script>
+</body>
+</html>

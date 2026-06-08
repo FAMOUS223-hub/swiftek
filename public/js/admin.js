@@ -9,19 +9,29 @@ function isAdminCreated(id, adminProducts) {
 }
 
 /* ───── Login ───── */
-const loginForm = document.getElementById('login-form');
+const loginForm = document.getElementById('admin-login-form');
 const loginScreen = document.getElementById('login-screen');
 const dashboard = document.getElementById('dashboard');
 const loginError = document.getElementById('login-error');
+const emailInput = document.getElementById('admin-email');
 const passwordInput = document.getElementById('admin-password');
 
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    loginError.classList.add('hidden');
     try {
-      await loginApi(passwordInput.value);
+      const result = await userLoginApi(emailInput.value.trim(), passwordInput.value);
+      if (result.role !== 'admin') {
+        loginError.textContent = 'This account does not have admin access';
+        loginError.classList.remove('hidden');
+        return;
+      }
+      localStorage.setItem('swiftek_admin_token', result.token);
+      localStorage.setItem('swiftek_admin_logged_in', 'true');
       showDashboard();
     } catch {
+      loginError.textContent = 'Invalid email or password';
       loginError.classList.remove('hidden');
       passwordInput.value = '';
     }
@@ -50,13 +60,29 @@ async function showDashboard() {
 }
 
 function checkLogin() {
-  if (sessionStorage.getItem('swiftek_admin_token')) {
+  if (localStorage.getItem('swiftek_admin_token')) {
     showDashboard();
+    return;
+  }
+  const userToken = localStorage.getItem('swiftek_user_token');
+  if (userToken) {
+    try {
+      const userData = JSON.parse(localStorage.getItem('swiftek_user_data') || '{}');
+      if (userData && userData.role === 'admin') {
+        localStorage.setItem('swiftek_admin_token', userToken);
+        localStorage.setItem('swiftek_admin_logged_in', 'true');
+        showDashboard();
+      }
+    } catch(e) {}
   }
 }
 
 document.getElementById('logout-btn')?.addEventListener('click', async () => {
   await logoutApi();
+  localStorage.removeItem('swiftek_admin_token');
+  localStorage.removeItem('swiftek_admin_logged_in');
+  localStorage.removeItem('swiftek_user_token');
+  localStorage.removeItem('swiftek_user_data');
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
   passwordInput.value = '';
@@ -66,16 +92,37 @@ document.getElementById('logout-btn')?.addEventListener('click', async () => {
 
 /* ───── Product List ───── */
 async function renderAdminProducts() {
-  const adminProducts = await fetchAdminProducts();
-  const storeProducts = await fetchProducts();
   const container = document.getElementById('admin-product-list');
   const search = (document.getElementById('admin-search')?.value || '').toLowerCase();
+  const isSearch = !!search;
+
+  if (!isSearch) {
+    container.innerHTML = skeletonCards(5);
+  } else {
+    container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  }
+
+  let adminProducts = [];
+  let storeProducts = [];
+
+  try {
+    [adminProducts, storeProducts] = await Promise.all([
+      fetchAdminProducts(),
+      fetchProducts()
+    ]);
+  } catch {
+    container.innerHTML = '<div class="admin-empty">Failed to load products. Try refreshing.</div>';
+    return;
+  }
 
   const allProducts = storeProducts;
-  const trash = await fetchTrash();
   document.getElementById('stat-total').textContent = allProducts.length;
   document.getElementById('stat-admin').textContent = adminProducts.filter(p => p._adminCreated).length;
-  document.getElementById('stat-trash').textContent = trash.length;
+
+  fetchTrash().then(trash => {
+    document.getElementById('stat-trash').textContent = trash.length;
+    updateTrashBadge();
+  }).catch(() => {});
   updateTrashBadge();
 
   let filtered = allProducts;
@@ -99,7 +146,7 @@ async function renderAdminProducts() {
       <div class="admin-product-img">
         ${p.images && p.images[0]
           ? `<img src="${p.images[0]}" alt="" onerror="this.style.display='none'">`
-          : '<div class="admin-no-img">📷</div>'}
+          : '<div class="admin-no-img"><i class="fas fa-camera"></i></div>'}
       </div>
       <div class="admin-product-info">
         <div class="admin-product-name">${escapeHtml(p.name)}</div>
@@ -177,15 +224,17 @@ async function updateTrashBadge() {
   const btn = document.getElementById('trash-btn');
   const trash = await fetchTrash();
   if (btn) {
-    btn.textContent = trash.length > 0 ? `🗑️ Trash (${trash.length})` : '🗑️ Trash';
+    const count = trash.length;
+    btn.innerHTML = `<i class="fas fa-trash"></i> Trash${count > 0 ? ` (${count})` : ''}`;
   }
 }
 
 async function renderTrash() {
   const container = document.getElementById('trash-list');
   const section = document.getElementById('trash-section');
-  const trash = await fetchTrash();
   if (!container || !section) return;
+  container.innerHTML = skeletonCards(2);
+  const trash = await fetchTrash();
 
   if (trash.length === 0) {
     section.classList.add('hidden');
@@ -198,7 +247,7 @@ async function renderTrash() {
       <div class="admin-product-img">
         ${t.images && t.images[0]
           ? `<img src="${t.images[0]}" alt="" onerror="this.style.display='none'">`
-          : '<div class="admin-no-img">📷</div>'}
+          : '<div class="admin-no-img"><i class="fas fa-camera"></i></div>'}
       </div>
       <div class="admin-product-info">
         <div class="admin-product-name">${escapeHtml(t.name)}</div>
@@ -213,29 +262,90 @@ async function renderTrash() {
   `).join('');
 }
 
-/* ───── Toggle admin products view ───── */
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#admin-prod-btn');
-  if (btn) {
-    e.preventDefault();
-    const section = document.getElementById('admin-prod-section');
-    const list = document.getElementById('admin-product-list');
-    const trashSection = document.getElementById('trash-section');
-    if (section) {
-      const isVisible = !section.classList.contains('hidden');
-      section.classList.toggle('hidden');
-      if (list) list.style.display = isVisible ? '' : 'none';
-      if (trashSection) trashSection.classList.add('hidden');
-      if (!isVisible) renderAdminProdList();
+/* ───── Section Navigation ───── */
+
+const SECTION_MAP = {
+  main:      { panel: null,          render: null,              hidesList: false },
+  'admin-prod': { panel: 'admin-prod-section', render: 'renderAdminProdList', hidesList: true },
+  trash:     { panel: 'trash-section', render: 'renderTrash',     hidesList: true },
+  users:     { panel: 'users-section', render: 'renderUsers',     hidesList: true },
+  'user-orders': { panel: 'user-orders-section', render: 'renderUserOrders', hidesList: true },
+  orders:    { panel: 'orders-section', render: 'renderAllOrders', hidesList: true },
+  settings:  { panel: 'settings-section', render: null,           hidesList: true }
+};
+
+let currentSection = 'main';
+
+function switchSection(sectionId) {
+  const list = document.getElementById('admin-product-list');
+  const search = document.getElementById('admin-search');
+  const formModal = document.getElementById('product-form-modal');
+
+  if (sectionId === 'main' || sectionId === currentSection) {
+    currentSection = 'main';
+    Object.keys(SECTION_MAP).forEach(key => {
+      const info = SECTION_MAP[key];
+      if (info.panel) document.getElementById(info.panel)?.classList.add('hidden');
+    });
+    if (list) list.style.display = '';
+    document.getElementById('settings-modal')?.classList.add('hidden');
+    if (formModal) formModal.classList.add('hidden');
+    updateActiveButton();
+    return;
+  }
+
+  const info = SECTION_MAP[sectionId];
+  if (!info) return;
+
+  Object.keys(SECTION_MAP).forEach(key => {
+    const other = SECTION_MAP[key];
+    if (other.panel && other.panel !== info.panel) {
+      document.getElementById(other.panel)?.classList.add('hidden');
+    }
+  });
+
+  if (list) list.style.display = info.hidesList ? 'none' : '';
+  if (info.panel) document.getElementById(info.panel)?.classList.remove('hidden');
+  document.getElementById('settings-modal')?.classList.add('hidden');
+  if (formModal) formModal.classList.add('hidden');
+
+  currentSection = sectionId;
+  updateActiveButton();
+
+  if (info.render && typeof window[info.render] === 'function') {
+    window[info.render]();
+  }
+
+  if (sectionId === 'settings') {
+    const modal = document.getElementById('settings-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      document.getElementById('pw-current').value = '';
+      document.getElementById('pw-new').value = '';
+      document.getElementById('pw-confirm').value = '';
+      document.getElementById('pw-error').classList.add('hidden');
+      loadAdminProfile();
     }
   }
+}
+
+function updateActiveButton() {
+  document.querySelectorAll('.admin-controls .admin-btn, .admin-stat-card').forEach(el => {
+    const section = el.dataset.section;
+    el.classList.toggle('active', section === currentSection && currentSection !== 'main');
+  });
+}
+
+document.querySelectorAll('.admin-controls .admin-btn[data-section], .admin-stat-card[data-section]').forEach(el => {
+  el.addEventListener('click', () => switchSection(el.dataset.section));
 });
 
 async function renderAdminProdList() {
   const container = document.getElementById('admin-prod-list');
   const section = document.getElementById('admin-prod-section');
-  const allProducts = await fetchAdminProducts();
   if (!container || !section) return;
+  container.innerHTML = skeletonCards(3);
+  const allProducts = await fetchAdminProducts();
 
   if (allProducts.length === 0) {
     section.classList.add('hidden');
@@ -263,26 +373,6 @@ async function renderAdminProdList() {
     `;
   }).join('');
 }
-
-/* ───── Toggle trash view ───── */
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#trash-btn');
-  if (btn) {
-    e.preventDefault();
-    const section = document.getElementById('trash-section');
-    const list = document.getElementById('admin-product-list');
-    const formSection = document.getElementById('product-form-modal');
-    const adminProdSection = document.getElementById('admin-prod-section');
-    if (section) {
-      const isVisible = !section.classList.contains('hidden');
-      section.classList.toggle('hidden');
-      if (list) list.style.display = isVisible ? '' : 'none';
-      if (formSection) formSection.classList.add('hidden');
-      if (adminProdSection) adminProdSection.classList.add('hidden');
-      if (!isVisible) renderTrash();
-    }
-  }
-});
 
 /* ───── Edit ───── */
 async function editProduct(id) {
@@ -554,6 +644,248 @@ document.getElementById('product-form')?.addEventListener('submit', async (e) =>
   location.reload();
 });
 
+/* ───── Users ───── */
+
+async function renderUsers() {
+  const container = document.getElementById('users-list');
+  const section = document.getElementById('users-section');
+  if (!container || !section) return;
+  container.innerHTML = skeletonCards(4);
+
+  const users = await fetchAdminUsers();
+  if (users.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No users registered yet.</div>';
+    return;
+  }
+
+  container.innerHTML = users.map(u => {
+    const statusBadge = u.status === 'active'
+      ? '<span style="color:#30d158;font-weight:600;">● Active</span>'
+      : u.status === 'suspended'
+      ? '<span style="color:#ff9f0a;font-weight:600;">● Suspended</span>'
+      : '<span style="color:#ff453a;font-weight:600;">● Revoked</span>';
+
+    let statusActions = '';
+    if (u.status === 'active') {
+      if (u.role !== 'admin') {
+        statusActions = `
+          <button class="admin-btn-sm admin-btn-outline" onclick="suspendUser('${u._id}')" title="Suspend"><i class="fas fa-pause"></i></button>
+          <button class="admin-btn-sm admin-btn-outline" onclick="revokeUser('${u._id}')" title="Revoke"><i class="fas fa-ban"></i></button>
+        `;
+      }
+      statusActions += `<button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>`;
+    } else if (u.status === 'suspended') {
+      statusActions = `
+        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u._id}')" title="Reactivate"><i class="fas fa-play"></i> Reactivate</button>
+        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+      `;
+    } else if (u.status === 'revoked') {
+      statusActions = `
+        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u._id}')" title="Reactivate"><i class="fas fa-undo"></i> Reactivate</button>
+        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+      `;
+    }
+    let actions = statusActions;
+
+    return `
+      <div class="admin-product-item">
+        <div class="admin-no-img" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:50%;background:var(--accent-light);color:var(--accent);flex-shrink:0;">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="admin-product-info">
+          <div class="admin-product-name">${escapeHtml(u.name)} ${u.role === 'admin' ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:99px;">ADMIN</span>' : ''}</div>
+          <div class="admin-product-meta">${escapeHtml(u.email)} · ${statusBadge} · ${u.verified ? '<i class="fas fa-check-circle" style="color:#30d158;"></i> Verified' : '<i class="fas fa-times-circle" style="color:#ff453a;"></i> Unverified'} · Joined ${new Date(u.createdAt).toLocaleDateString()}</div>
+          <div class="admin-product-meta">Orders: ${u.orderCount} · Total Spent: GH₵ ${(u.totalSpent || 0).toLocaleString()}</div>
+        </div>
+        <div class="admin-product-actions">
+          ${actions}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function suspendUser(userId) {
+  const confirmed = await showModal({
+    title: 'Suspend User',
+    message: 'Are you sure you want to suspend this user? They will not be able to log in until reactivated.',
+    confirmText: 'Suspend',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!confirmed) return;
+  try {
+    await updateUserStatusApi(userId, 'suspended');
+    showToast('User suspended');
+    renderUsers();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function revokeUser(userId) {
+  const confirmed = await showModal({
+    title: 'Revoke User',
+    message: 'Are you sure you want to revoke this user\'s access? This is a permanent action, though you can reactivate later.',
+    confirmText: 'Revoke',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!confirmed) return;
+  try {
+    await updateUserStatusApi(userId, 'revoked');
+    showToast('User revoked');
+    renderUsers();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function reactivateUser(userId) {
+  const confirmed = await showModal({
+    title: 'Reactivate User',
+    message: 'Restore this user\'s access? They will be able to log in again.',
+    confirmText: 'Reactivate',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!confirmed) return;
+  try {
+    await updateUserStatusApi(userId, 'active');
+    showToast('User reactivated');
+    renderUsers();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function deleteUserConfirm(userId, userName) {
+  const confirmed = await showModal({
+    title: 'Delete User',
+    message: `Permanently delete ${userName} and all their orders? This cannot be undone.`,
+    confirmText: 'Delete Forever',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!confirmed) return;
+  try {
+    await deleteUserApi(userId);
+    showToast('User deleted permanently');
+    renderUsers();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function renderUserOrders() {
+  const container = document.getElementById('user-orders-list');
+  const section = document.getElementById('user-orders-section');
+  if (!container || !section) return;
+
+  const users = await fetchAdminUsers();
+  if (users.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No users registered yet.</div>';
+    return;
+  }
+
+  container.innerHTML = skeletonUoCards(3);
+
+  const results = await Promise.all(users.map(async (u) => {
+    let ordersHtml = '';
+    let confirmedOrders = [];
+    try {
+      const orders = await fetchAdminUserOrders(u._id);
+      confirmedOrders = (orders || []).filter(o => o.status !== 'pending');
+      if (confirmedOrders.length > 0) {
+        ordersHtml = confirmedOrders.map(order => `
+          <div class="uo-order">
+            <div class="uo-order-header">
+              <strong>${escapeHtml(order.orderRef)}</strong>
+              <span class="uo-order-status">${order.status}</span>
+              <span class="uo-order-total">GH₵ ${(order.total || 0).toLocaleString()}</span>
+            </div>
+            <div class="uo-order-date">${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+            <div class="uo-order-items">${order.items.map(item => `${escapeHtml(item.name)} x${item.qty}`).join(', ')}</div>
+          </div>
+        `).join('');
+      }
+    } catch {
+      return null;
+    }
+    if (confirmedOrders.length === 0) return null;
+
+    return `
+      <div class="uo-user-card">
+        <div class="uo-user-header">
+          <div class="uo-user-avatar"><i class="fas fa-user"></i></div>
+          <div class="uo-user-info">
+            <div class="uo-user-name">${escapeHtml(u.name)}</div>
+            <div class="uo-user-email">${escapeHtml(u.email)}</div>
+          </div>
+          <div class="uo-user-meta">
+            <span>${confirmedOrders.length} order${confirmedOrders.length !== 1 ? 's' : ''}</span>
+            <span>GH₵ ${(u.totalSpent || 0).toLocaleString()}</span>
+          </div>
+        </div>
+        <div class="uo-orders-list">${ordersHtml}</div>
+      </div>
+    `;
+  }));
+
+  const filtered = results.filter(Boolean);
+  container.innerHTML = filtered.length > 0
+    ? filtered.join('')
+    : '<div class="admin-empty">No confirmed orders yet.</div>';
+}
+
+/* ───── Orders ───── */
+
+async function renderAllOrders() {
+  const container = document.getElementById('orders-list-admin');
+  const section = document.getElementById('orders-section');
+  if (!container || !section) return;
+  container.innerHTML = skeletonOrderCards(4);
+
+  const orders = await fetchAdminOrders();
+  if (orders.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No orders placed yet.</div>';
+    return;
+  }
+
+  container.innerHTML = orders.map(order => `
+    <div class="admin-product-item" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div class="admin-product-name">${escapeHtml(order.orderRef)}</div>
+          <div class="admin-product-meta">${order.userId ? escapeHtml(order.userId.name || 'Unknown') + ' · ' + escapeHtml(order.userId.email || '') : 'Unknown User'} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select class="admin-order-status-select" onchange="updateOrderStatus('${order._id}', this.value)">
+            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+            <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Shipped</option>
+            <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
+            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+          <span style="font-weight:700;font-size:13px;">GH₵ ${(order.total || 0).toLocaleString()}</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+        ${order.items.map(item => `${escapeHtml(item.name)} x${item.qty}`).join(', ')}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateOrderStatus(orderId, status) {
+  try {
+    await updateOrderStatusApi(orderId, status);
+    showToast('Order status updated');
+  } catch (err) {
+    showToast('Failed to update status');
+  }
+}
+
 /* ───── Search ───── */
 let searchTimeout;
 document.getElementById('admin-search')?.addEventListener('input', () => {
@@ -563,14 +895,16 @@ document.getElementById('admin-search')?.addEventListener('input', () => {
 
 /* ───── Settings ───── */
 
-document.getElementById('settings-btn')?.addEventListener('click', () => {
-  const modal = document.getElementById('settings-modal');
-  modal.classList.remove('hidden');
-  document.getElementById('pw-current').value = '';
-  document.getElementById('pw-new').value = '';
-  document.getElementById('pw-confirm').value = '';
-  document.getElementById('pw-error').classList.add('hidden');
-});
+async function loadAdminProfile() {
+  try {
+    const user = await fetchMe();
+    document.getElementById('prof-name').value = user.name || '';
+    document.getElementById('prof-email').value = user.email || '';
+  } catch (err) {
+    document.getElementById('prof-name').value = '';
+    document.getElementById('prof-email').value = '';
+  }
+}
 
 document.getElementById('pw-cancel')?.addEventListener('click', () => {
   document.getElementById('settings-modal').classList.add('hidden');
@@ -582,30 +916,43 @@ document.getElementById('settings-modal')?.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('password-form')?.addEventListener('submit', async (e) => {
+document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const current = document.getElementById('pw-current').value;
+  const name = document.getElementById('prof-name').value.trim();
+  const email = document.getElementById('prof-email').value.trim();
+  const currentPw = document.getElementById('pw-current').value;
   const newPw = document.getElementById('pw-new').value;
   const confirmPw = document.getElementById('pw-confirm').value;
   const errorEl = document.getElementById('pw-error');
 
-  if (newPw !== confirmPw) {
+  if (newPw && newPw !== confirmPw) {
     errorEl.textContent = 'New passwords do not match';
     errorEl.classList.remove('hidden');
     return;
   }
-  if (newPw.length < 4) {
+  if (newPw && newPw.length < 4) {
     errorEl.textContent = 'Password must be at least 4 characters';
     errorEl.classList.remove('hidden');
     return;
   }
 
   try {
-    await changePasswordApi(current, newPw);
+    await updateProfileApi({
+      name: name || undefined,
+      email: email || undefined,
+      currentPassword: newPw ? currentPw : undefined,
+      newPassword: newPw || undefined
+    });
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
     return;
+  }
+
+  if (newPw) {
+    try {
+      await changePasswordApi(currentPw, newPw);
+    } catch (e) {}
   }
 
   document.getElementById('pw-current').value = '';
@@ -613,7 +960,7 @@ document.getElementById('password-form')?.addEventListener('submit', async (e) =
   document.getElementById('pw-confirm').value = '';
   errorEl.classList.add('hidden');
   document.getElementById('settings-modal').classList.add('hidden');
-  showModal({ title: 'Password Updated', message: 'Your admin password has been changed successfully.', type: 'alert' });
+  showModal({ title: 'Settings Saved', message: 'Your profile has been updated successfully.', type: 'alert' });
 });
 
 /* ───── Helpers ───── */
@@ -674,6 +1021,64 @@ function showModal({ title, message, confirmText, cancelText, type }) {
       if (e.target === overlay) { overlay.remove(); resolve(false); }
     });
   });
+}
+
+/* ───── Toast ───── */
+function showToast(message) {
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = message;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2600);
+}
+
+/* ───── Skeleton Helpers ───── */
+
+function skeletonCards(count) {
+  return Array(count).fill(`
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-avatar"></div>
+      <div class="skeleton-content">
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line-sm"></div>
+      </div>
+      <div class="skeleton skeleton-btn"></div>
+    </div>
+  `).join('');
+}
+
+function skeletonUoCards(count) {
+  return Array(count).fill(`
+    <div style="padding:20px;border:1px solid var(--border);border-radius:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="skeleton skeleton-avatar"></div>
+        <div style="flex:1">
+          <div class="skeleton skeleton-line" style="width:50%"></div>
+          <div class="skeleton skeleton-line-sm" style="width:30%"></div>
+        </div>
+      </div>
+      <div class="skeleton skeleton-line" style="width:80%"></div>
+      <div class="skeleton skeleton-line-sm" style="width:40%"></div>
+    </div>
+  `).join('');
+}
+
+function skeletonOrderCards(count) {
+  return Array(count).fill(`
+    <div class="skeleton-card" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="flex:1"><div class="skeleton skeleton-line" style="width:40%"></div></div>
+        <div class="skeleton skeleton-btn" style="width:90px;height:30px;"></div>
+      </div>
+      <div class="skeleton skeleton-line-sm" style="width:70%"></div>
+    </div>
+  `).join('');
 }
 
 /* ───── Init ───── */

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SwifTek Accessories — Product Details">
-  <title>Product — SwifTek Accessories</title>
+  <meta name="description" content="SwifTek Accessories — Shopping Cart">
+  <title>Shopping Cart — SwifTek Accessories</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://www.apple.com">
@@ -22,15 +22,11 @@
       <button class="menu-btn header-action-btn" aria-label="Menu"><i class="fas fa-bars"></i></button>
       <a href="index.html" class="logo">
         <span class="logo-icon">S</span>
-        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+        <span class="logo-text">Swif<span>Tek </span>Accessories</span>
       </a>
-      <div class="search-wrapper">
-        <input type="text" class="search-input" placeholder="Search products..." aria-label="Search">
-        <button class="search-submit" aria-label="Search">→</button>
-      </div>
       <div class="header-actions">
         <button class="header-action-btn theme-toggle" aria-label="Toggle theme" title="Toggle theme"><i class="fas fa-moon"></i></button>
-        <a href="admin.html" class="header-action-btn" aria-label="Admin Login" title="Admin Login"><i class="fas fa-lock"></i></a>
+        <a href="login.html" class="header-action-btn" id="header-user-btn" aria-label="Account" title="Account"><i class="fas fa-user"></i></a>
         <a href="cart.html" class="header-action-btn" aria-label="Cart">
           🛒
           <span class="cart-badge cart-count">0</span>
@@ -61,22 +57,103 @@
       <li><a href="index.html?cat=Wearables"><span class="emoji">⌚</span> Wearables</a></li>
       <li><a href="index.html?cat=Cables"><span class="emoji">🔗</span> Cables</a></li>
       <li><a href="cart.html"><span class="emoji">🛒</span> Cart</a></li>
+      <li><a href="login.html"><span class="emoji">👤</span> Login</a></li>
+      <li><a href="signup.html"><span class="emoji">📝</span> Sign Up</a></li>
     </ul>
   </nav>
 
   <!-- Navigation -->
   <nav class="nav-bar">
     <ul class="nav-inner container">
-      <li><a href="index.html">← Back to Store</a></li>
+      <li><a href="index.html">← Continue Shopping</a></li>
     </ul>
   </nav>
 
-  <!-- Product Detail -->
-  <main class="product-detail container" id="product-detail">
-    <div class="detail-layout" id="product-detail-content">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p class="loading-text">Loading product...</p>
+  <!-- Cart -->
+  <main class="cart-page container">
+    <div class="cart-head">
+      <div class="cart-head-left">
+        <h1>Shopping Cart</h1>
+        <span class="cart-head-info cart-count-label">0 items</span>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="cart-empty">
+      <div class="cart-empty-icon">🛒</div>
+      <h2>Your cart is empty</h2>
+      <p>Looks like you haven't added anything yet. Browse our collection!</p>
+      <a href="index.html" class="btn btn-primary">Browse Products →</a>
+    </div>
+
+    <!-- Cart Content -->
+    <div class="cart-layout">
+      <div class="cart-items">
+        <div id="cart-skeleton">
+          <div class="skeleton-cart-item">
+            <div class="skeleton skeleton-cart-img"></div>
+            <div class="skeleton-cart-body">
+              <div class="skeleton skeleton-cart-line"></div>
+              <div class="skeleton skeleton-cart-line"></div>
+            </div>
+            <div class="skeleton skeleton-cart-qty"></div>
+          </div>
+          <div class="skeleton-cart-item">
+            <div class="skeleton skeleton-cart-img"></div>
+            <div class="skeleton-cart-body">
+              <div class="skeleton skeleton-cart-line"></div>
+              <div class="skeleton skeleton-cart-line"></div>
+            </div>
+            <div class="skeleton skeleton-cart-qty"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cart-summary hidden">
+        <h2>Order Summary</h2>
+        <p class="cart-summary-sub">Complete your order with WhatsApp</p>
+        <div class="sum-row">
+          <span>Subtotal</span>
+          <span class="amount" id="cart-subtotal">GH₵ 0</span>
+        </div>
+        <div class="sum-row">
+          <span>Delivery <span class="text-sm text-muted">(based on location)</span></span>
+          <span class="amount text-sm">Calculated at checkout</span>
+        </div>
+        <div class="promo-field">
+          <input type="text" id="promo-input" placeholder="Promo code" maxlength="20">
+          <button class="promo-btn" onclick="applyPromo()">Apply</button>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="sum-row total">
+          <span>Total</span>
+          <span class="amount" id="cart-total">GH₵ 0</span>
+        </div>
+        <div id="checkout-user-info" class="checkout-user-info hidden">
+          <div class="checkout-user-label"><i class="fas fa-user"></i> Ordering as</div>
+          <div id="checkout-user-name" class="checkout-user-name"></div>
+          <div id="checkout-user-email" class="checkout-user-email"></div>
+        </div>
+
+        <div class="checkout-recipient-box">
+          <label class="checkout-diff-toggle">
+            <input type="checkbox" id="checkout-different" onchange="toggleRecipientFields()">
+            <span>Deliver to a different person?</span>
+          </label>
+          <div id="checkout-recipient-fields" class="checkout-recipient-fields hidden">
+            <input type="text" id="checkout-recipient-name" class="checkout-input" placeholder="Recipient name">
+            <textarea id="checkout-address" class="checkout-input checkout-textarea" placeholder="Delivery address"></textarea>
+          </div>
+        </div>
+
+        <button class="whatsapp-btn" onclick="checkoutWhatsApp()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Order via WhatsApp
+        </button>
+        <button class="clear-cart" onclick="clearCart()">Clear Cart</button>
+        <div class="ship-notice">
+          <span>🚚</span>
+          <span>Delivery comes at a cost based on your location in Ghana</span>
+        </div>
       </div>
     </div>
   </main>
@@ -107,7 +184,8 @@
            <li><a href="#" onclick="event.preventDefault();openModal('delivery-modal')">Delivery Info</a></li>
           <li><a href="#" onclick="event.preventDefault();openModal('returns-modal')">Returns</a></li>
           <li><a href="#" onclick="event.preventDefault();openModal('faq-modal')">FAQ</a></li>
-          <li><a href="admin.html"><i class="fas fa-lock"></i> Admin</a></li>
+          <li><a href="login.html"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+          <li><a href="signup.html"><i class="fas fa-user-plus"></i> Sign Up</a></li>
         </ul>
       </div>
       <div>
