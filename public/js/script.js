@@ -152,7 +152,7 @@ function checkoutWhatsApp() {
     return;
   }
 
-  const token = getUserToken ? getUserToken() : null;
+  const token = typeof getUserToken === 'function' ? getUserToken() : null;
   const userData = getUserData();
   if (!token || !userData) {
     showToast('Please login to place an order');
@@ -428,7 +428,7 @@ async function renderProductDetail() {
 
       options.forEach(opt => {
         const optLabel = escapeHtml(opt.label);
-        const optValue = opt.label.replace(/'/g, "\\'");
+        const optValue = opt.label.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         if (isColor) {
           html += `
             <button class="color-swatch ${selectedOptions[key] === opt.label ? 'selected' : ''}"
@@ -903,7 +903,7 @@ function updateCheckoutUserInfo() {
 function updateHeaderUser() {
   const btn = document.getElementById('header-user-btn');
   if (!btn) return;
-  const token = getUserToken ? getUserToken() : null;
+  const token = typeof getUserToken === 'function' ? getUserToken() : null;
   const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || 'null'); } catch(e) { return null; } })();
 
   function buildBadge(count) {
@@ -1011,12 +1011,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let productsToRender = allProducts;
 
-    if (searchParam) {
+      if (searchParam) {
       const q = searchParam.toLowerCase();
       productsToRender = allProducts.filter(p =>
         p.name.toLowerCase().includes(q) ||
         p.brand.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q) ||
+        (p.description && p.description.toLowerCase().includes(q))
       );
       const searchInput = document.querySelector('.search-input');
       if (searchInput) searchInput.value = searchParam;

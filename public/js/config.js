@@ -5,4 +5,3 @@
 //
 // IMPORTANT: Add this file to .gitignore so your password hash stays local.
 // See config.sample.js for a template others can use.
-const ADMIN_PASSWORD_HASH = 'b40e4bae32948b4273a97018a81e1cc5920037c3f0e8c73947b0ab158051b02f';

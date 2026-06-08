@@ -58,7 +58,7 @@ async function showDashboard() {
     adminsBtn.style.display = userData.isSuperAdmin ? '' : 'none';
   }
 
-  var heroVideo = document.querySelector('.admin-hero-video');
+  const heroVideo = document.querySelector('.admin-hero-video');
   if (heroVideo) {
     heroVideo.play().catch(function() {
       function tryPlay() {
@@ -124,7 +124,7 @@ document.getElementById('logout-btn')?.addEventListener('click', async () => {
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
   passwordInput.value = '';
-  var heroVideo = document.querySelector('.admin-hero-video');
+  const heroVideo = document.querySelector('.admin-hero-video');
   if (heroVideo) { heroVideo.pause(); }
 });
 
@@ -159,7 +159,6 @@ async function renderAdminProducts() {
 
   fetchTrash().then(trash => {
     document.getElementById('stat-trash').textContent = trash.length;
-    updateTrashBadge();
   }).catch(() => {});
   updateTrashBadge();
 
@@ -989,12 +988,6 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
     errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
     return;
-  }
-
-  if (newPw) {
-    try {
-      await changePasswordApi(currentPw, newPw);
-    } catch (e) {}
   }
 
   document.getElementById('pw-current').value = '';

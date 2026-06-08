@@ -1473,8 +1473,8 @@ input, select, textarea { font-family: inherit; }
 .promo-field input::placeholder { color: var(--text-tertiary); }
 .promo-btn {
   padding: 9px 16px;
-  background: var(--text);
-  color: white;
+  background: var(--accent);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--radius-sm);
