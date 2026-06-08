@@ -1129,7 +1129,7 @@ function showCreateAdminModal() {
   document.getElementById('admin-editing-id').value = '';
   document.getElementById('admin-form').reset();
   document.getElementById('admin-password-field').style.display = '';
-  document.getElementById('admin-password').required = true;
+  document.getElementById('admin-modal-password').required = true;
   document.querySelectorAll('#admin-form .admin-checkbox input').forEach(cb => cb.checked = true);
   document.getElementById('admin-modal').classList.remove('hidden');
 }
@@ -1139,7 +1139,7 @@ function showEditAdminModal(adminId) {
   document.getElementById('admin-submit-btn').textContent = 'Update Permissions';
   document.getElementById('admin-editing-id').value = adminId;
   document.getElementById('admin-password-field').style.display = 'none';
-  document.getElementById('admin-password').required = false;
+  document.getElementById('admin-modal-password').required = false;
   document.getElementById('admin-form').reset();
   document.getElementById('admin-modal').classList.remove('hidden');
 
@@ -1147,7 +1147,7 @@ function showEditAdminModal(adminId) {
     const admin = admins.find(a => a._id === adminId);
     if (!admin) return;
     document.getElementById('admin-name').value = admin.name || '';
-    document.getElementById('admin-email').value = admin.email || '';
+    document.getElementById('admin-modal-email').value = admin.email || '';
     document.querySelectorAll('#admin-form .admin-checkbox input').forEach(cb => {
       cb.checked = (admin.permissions || []).includes(cb.value);
     });
@@ -1158,8 +1158,8 @@ document.getElementById('admin-form')?.addEventListener('submit', async function
   e.preventDefault();
   const editingId = document.getElementById('admin-editing-id').value;
   const name = document.getElementById('admin-name').value.trim();
-  const email = document.getElementById('admin-email').value.trim();
-  const password = document.getElementById('admin-password').value;
+  const email = document.getElementById('admin-modal-email').value.trim();
+  const password = document.getElementById('admin-modal-password').value;
   const perms = [];
   document.querySelectorAll('#admin-form .admin-checkbox input:checked').forEach(cb => perms.push(cb.value));
 
