@@ -255,6 +255,28 @@ async function fetchStats() {
   return apiGet('/api/stats');
 }
 
+async function fetchPendingOrderCount() {
+  return apiGet('/api/orders/pending-count');
+}
+
+// ───── Admin Management (super admin) ─────
+
+async function fetchAdmins() {
+  return apiGet('/api/admin/admins');
+}
+
+async function createAdminApi(data) {
+  return apiPost('/api/admin/admins', data);
+}
+
+async function updateAdminPermissionsApi(adminId, data) {
+  return apiPatch(`/api/admin/admins/${adminId}`, data);
+}
+
+async function deleteAdminApi(adminId) {
+  return apiDelete(`/api/admin/admins/${adminId}`);
+}
+
 // ───── Session helpers ─────
 
 function clearUserSession() {

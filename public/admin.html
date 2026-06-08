@@ -103,6 +103,7 @@
         <button id="user-orders-btn" class="admin-btn admin-btn-outline" data-section="user-orders"><i class="fas fa-user-tag"></i> User Orders</button>
         <button id="orders-btn" class="admin-btn admin-btn-outline" data-section="orders"><i class="fas fa-truck"></i> Orders</button>
         <button id="trash-btn" class="admin-btn admin-btn-outline" data-section="trash"><i class="fas fa-trash"></i> Trash</button>
+        <button id="admins-btn" class="admin-btn admin-btn-outline" data-section="admins"><i class="fas fa-user-shield"></i> Admins</button>
         <button id="settings-btn" class="admin-btn admin-btn-outline" data-section="settings"><i class="fas fa-cog"></i> Settings</button>
         <input type="text" id="admin-search" class="admin-input admin-input-search" placeholder="Search products...">
       </div>
@@ -143,6 +144,13 @@
         <h2 class="admin-section-title"><i class="fas fa-truck"></i> All Orders</h2>
         <p class="admin-section-desc">Track and manage all customer orders.</p>
         <div id="orders-list-admin" class="admin-product-list"></div>
+      </div>
+
+      <!-- Admins -->
+      <div id="admins-section" class="hidden admin-section-block">
+        <h2 class="admin-section-title"><i class="fas fa-user-shield"></i> Admins</h2>
+        <p class="admin-section-desc">Manage admin accounts and permissions. Only super admins can add, modify, or remove admins.</p>
+        <div id="admins-list" class="admin-product-list"></div>
       </div>
 
       <!-- Settings -->
@@ -304,6 +312,42 @@
       </div>
       <div class="custom-modal-footer">
         <button type="button" class="admin-btn admin-btn-outline" id="cancel-form-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Modal -->
+  <div id="admin-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-settings">
+      <div class="custom-modal-header">
+        <h3 id="admin-modal-title"><i class="fas fa-user-shield"></i> New Admin</h3>
+        <button type="button" class="admin-btn admin-btn-sm admin-btn-ghost" onclick="document.getElementById('admin-modal').classList.add('hidden')">&times;</button>
+      </div>
+      <div class="custom-modal-body">
+        <form id="admin-form">
+          <div class="admin-field">
+            <label for="admin-name">Name</label>
+            <input type="text" id="admin-name" class="admin-input" autocomplete="off" placeholder="Admin name" required>
+          </div>
+          <div class="admin-field">
+            <label for="admin-email">Email</label>
+            <input type="email" id="admin-email" class="admin-input" autocomplete="off" placeholder="admin@example.com" required>
+          </div>
+          <div class="admin-field" id="admin-password-field">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" class="admin-input" autocomplete="off" placeholder="Set a password" required>
+          </div>
+          <div class="admin-field">
+            <label>Permissions</label>
+            <div class="admin-checkboxes">
+              <label class="admin-checkbox"><input type="checkbox" value="products" checked> Products</label>
+              <label class="admin-checkbox"><input type="checkbox" value="orders" checked> Orders</label>
+              <label class="admin-checkbox"><input type="checkbox" value="users" checked> Users</label>
+            </div>
+          </div>
+          <input type="hidden" id="admin-editing-id" value="">
+          <button type="submit" class="admin-btn admin-btn-primary admin-btn-full admin-btn-mt16" id="admin-submit-btn">Create Admin</button>
+        </form>
       </div>
     </div>
   </div>

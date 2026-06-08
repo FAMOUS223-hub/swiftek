@@ -26,6 +26,17 @@ function sendEmail({ to, subject, html }) {
   });
 }
 
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/[&<>"']/g, function (m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    if (m === '"') return '&quot;';
+    return '&#x27;';
+  });
+}
+
 const SeedProduct = require('./models/SeedProduct');
 const AdminProduct = require('./models/AdminProduct');
 const DeletedId = require('./models/DeletedId');
@@ -67,9 +78,16 @@ async function ensureAdminUser() {
       email: 'admin@swiftek.com',
       password: 'admin',
       role: 'admin',
+      isSuperAdmin: true,
+      permissions: ['products', 'orders', 'users'],
       verified: true
     });
     console.log('Admin user created (admin@swiftek.com / admin)');
+  } else if (!admin.isSuperAdmin) {
+    admin.isSuperAdmin = true;
+    admin.permissions = ['products', 'orders', 'users'];
+    await admin.save();
+    console.log('Existing admin promoted to super admin');
   }
 }
 
@@ -144,8 +162,18 @@ async function requireAuth(req, res, next) {
 }
 
 async function requireAdmin(req, res, next) {
-  await requireAuth(req, res, () => {
+  await requireAuth(req, res, async () => {
     if (req.userRole !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+    const user = await User.findById(req.userId).select('isSuperAdmin permissions role').lean();
+    if (!user) return res.status(403).json({ error: 'Admin not found' });
+    req.adminUser = user;
+    next();
+  });
+}
+
+async function requireSuperAdmin(req, res, next) {
+  await requireAdmin(req, res, () => {
+    if (!req.adminUser.isSuperAdmin) return res.status(403).json({ error: 'Super admin access required' });
     next();
   });
 }
@@ -274,7 +302,7 @@ app.post('/api/auth/login', async (req, res) => {
       success: true,
       token,
       role: user.role,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: { id: user._id, name: user.name, email: user.email, isSuperAdmin: user.isSuperAdmin || false }
     });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
@@ -320,23 +348,29 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;">
           <tr>
             <td align="center" style="padding:40px 16px;">
-              <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
-                <tr>
-                  <td style="background:#ffffff;border-radius:16px;padding:40px 32px 32px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
 
-                    <!-- Logo / Brand -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
-                      <tr>
-                        <td align="center">
-                          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 8px;">
-                            <tr>
-                              <td align="center" style="width:48px;height:48px;background:#0071e3;border-radius:14px;font-size:24px;font-weight:700;color:#ffffff;line-height:48px;">S</td>
-                            </tr>
-                          </table>
-                          <p style="font-size:18px;font-weight:700;color:#1d1d1f;margin:0;letter-spacing:-0.3px;">Swif<span style="color:#0071e3;">Tek</span> Accessories</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <!-- Letterhead -->
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#0071e3 0%,#002b5e 100%);border-radius:16px 16px 0 0;padding:36px 32px 28px;text-align:center;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
+                        <tr>
+                          <td align="center" style="width:56px;height:56px;font-size:28px;font-weight:800;color:#ffffff;line-height:56px;background:rgba(255,255,255,0.15);border-radius:16px;">S</td>
+                          <td style="width:8px;"></td>
+                          <td align="left" valign="middle">
+                            <table role="presentation" cellpadding="0" cellspacing="0">
+                              <tr><td style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:2.5px;text-transform:uppercase;">SwifTek</td></tr>
+                              <tr><td style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);letter-spacing:4px;text-transform:uppercase;">Accessories</td></tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      <div style="width:40px;height:2px;background:rgba(255,255,255,0.2);border-radius:1px;margin:0 auto;"></div>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 16px 16px;">
 
                     <!-- Heading -->
                     <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.3px;">Reset your password</h1>
@@ -459,7 +493,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {
-  const user = await User.findById(req.userId).select('name email role status verified');
+  const user = await User.findById(req.userId).select('name email role isSuperAdmin status verified');
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.status === 'suspended') {
     return res.status(403).json({ error: 'Your account has been suspended. Contact support for assistance.' });
@@ -566,9 +600,36 @@ app.post('/api/orders', requireAuth, async (req, res) => {
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 }).lean();
-    res.json(orders);
+    if (!orders.length) return res.json([]);
+
+    const userIds = [...new Set(orders.map(o => o.userId?.toString()).filter(Boolean))];
+    const users = await User.find({ _id: { $in: userIds } }).select('name email').lean();
+    const userMap = {};
+    users.forEach(u => { userMap[u._id.toString()] = u; });
+
+    const result = orders.map(o => ({
+      ...o,
+      user: userMap[o.userId?.toString()] || null
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.get('/api/orders/pending-count', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('role').lean();
+    let count;
+    if (user && user.role === 'admin') {
+      count = await Order.countDocuments({ status: 'pending' });
+    } else {
+      count = await Order.countDocuments({ userId: req.userId, status: 'pending' });
+    }
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get pending count' });
   }
 });
 
@@ -588,9 +649,139 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
+
+    const order = await Order.findById(req.params.id).populate('userId', 'name email').lean();
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
     await Order.findByIdAndUpdate(req.params.id, { status });
     res.json({ success: true });
+
+    if ((status === 'confirmed' || status === 'cancelled') && order.userId?.email) {
+      const user = order.userId;
+      const itemsList = order.items.map(i =>
+        `<tr><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;">${escapeHtml(i.name)}${i.specs ? '<br><span style="font-size:12px;color:#8e8e93;">' + escapeHtml(i.specs) + '</span>' : ''}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:center;">x${i.qty}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:right;">GH₵ ${i.price.toFixed(2)}</td></tr>`
+      ).join('');
+
+      const isConfirmed = status === 'confirmed';
+      const badgeColor = isConfirmed ? '#30d158' : '#ff453a';
+      const badgeIcon = isConfirmed ? '✓' : '✕';
+      const heading = isConfirmed ? 'Order Confirmed' : 'Order Cancelled';
+      const message = isConfirmed
+        ? 'Good news! Your order has been confirmed and is being processed. We will notify you once it ships.'
+        : 'Your order has been cancelled. If you have any questions, please contact our support team.';
+
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;">
+            <tr>
+              <td align="center" style="padding:40px 16px;">
+                <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+
+                  <!-- Letterhead -->
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#0071e3 0%,#002b5e 100%);border-radius:16px 16px 0 0;padding:36px 32px 28px;text-align:center;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
+                        <tr>
+                          <td align="center" style="width:56px;height:56px;font-size:28px;font-weight:800;color:#ffffff;line-height:56px;background:rgba(255,255,255,0.15);border-radius:16px;">S</td>
+                          <td style="width:8px;"></td>
+                          <td align="left" valign="middle">
+                            <table role="presentation" cellpadding="0" cellspacing="0">
+                              <tr><td style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:2.5px;text-transform:uppercase;">SwifTek</td></tr>
+                              <tr><td style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);letter-spacing:4px;text-transform:uppercase;">Accessories</td></tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      <div style="width:40px;height:2px;background:rgba(255,255,255,0.2);border-radius:1px;margin:0 auto;"></div>
+                    </td>
+                  </tr>
+
+                  <!-- Body -->
+                  <tr>
+                    <td style="background:#ffffff;padding:32px;border-radius:0 0 16px 16px;">
+
+                      <!-- Status Badge -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+                        <tr>
+                          <td align="center" style="width:72px;height:72px;border-radius:50%;background:${badgeColor}20;text-align:center;">
+                            <span style="font-size:32px;color:${badgeColor};">${badgeIcon}</span>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;text-align:center;margin:0 0 6px;letter-spacing:-0.3px;">${heading}</h1>
+                      <p style="font-size:16px;color:#6e6e73;text-align:center;margin:0 0 28px;line-height:1.5;">${message}</p>
+
+                      <!-- Order Reference -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="background:#f5f5f7;border-radius:12px;width:100%;margin-bottom:24px;">
+                        <tr>
+                          <td style="padding:16px 20px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                              <tr>
+                                <td style="font-size:13px;color:#8e8e93;">Order Reference</td>
+                                <td style="font-size:13px;color:#1d1d1f;font-weight:600;text-align:right;">${escapeHtml(order.orderRef)}</td>
+                              </tr>
+                              <tr>
+                                <td style="font-size:13px;color:#8e8e93;padding-top:6px;">Date</td>
+                                <td style="font-size:13px;color:#1d1d1f;text-align:right;padding-top:6px;">${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Items Table -->
+                      <h3 style="font-size:14px;font-weight:600;color:#1d1d1f;margin:0 0 10px;">Items Ordered</h3>
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
+                        ${itemsList}
+                      </table>
+
+                      <!-- Total -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                          <td style="border-top:2px solid #1d1d1f;padding:12px 0 0;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                              <tr>
+                                <td style="font-size:15px;font-weight:700;color:#1d1d1f;">Total</td>
+                                <td style="font-size:18px;font-weight:700;color:#1d1d1f;text-align:right;">GH₵ ${order.total.toFixed(2)}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Footer Info -->
+                      <p style="font-size:13px;color:#8e8e93;text-align:center;margin:0 0 4px;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Store</p>
+                      <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:0;">Accra, Ghana &middot; Built by Famous Tech</p>
+                      <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:16px 0 0;">Need help? Contact us on <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">WhatsApp</a></p>
+
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const subject = isConfirmed
+        ? `Order Confirmed — ${order.orderRef} — SwifTek Accessories`
+        : `Order Cancelled — ${order.orderRef} — SwifTek Accessories`;
+
+      sendEmail({ to: user.email, subject, html: emailHtml }).catch(err => {
+        console.error('[ORDER EMAIL FAILED]', err.message);
+      });
+    }
   } catch (err) {
+    console.error('[ORDER STATUS ERROR]', err.message);
     res.status(500).json({ error: 'Failed to update order' });
   }
 });
@@ -668,6 +859,86 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     res.json({ success: true, message: 'User and all associated orders deleted permanently' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ───── Admin Management (super admin only) ─────
+
+app.get('/api/admin/admins', requireAdmin, async (req, res) => {
+  try {
+    const admins = await User.find({ role: 'admin' })
+      .select('name email isSuperAdmin permissions status createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(admins);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admins' });
+  }
+});
+
+app.post('/api/admin/admins', requireSuperAdmin, async (req, res) => {
+  try {
+    const { name, email, password, permissions } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existing) return res.status(400).json({ error: 'Email already in use' });
+
+    const admin = await User.create({
+      name,
+      email: email.toLowerCase().trim(),
+      password,
+      role: 'admin',
+      isSuperAdmin: false,
+      permissions: permissions || ['products', 'orders', 'users'],
+      verified: true
+    });
+
+    res.json({ success: true, admin: { id: admin._id, name: admin.name, email: admin.email, permissions: admin.permissions, isSuperAdmin: false } });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ error: 'Email already in use' });
+    res.status(500).json({ error: 'Failed to create admin' });
+  }
+});
+
+app.patch('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Admin not found' });
+
+    if (target.isSuperAdmin) {
+      return res.status(400).json({ error: 'Cannot modify a super admin' });
+    }
+
+    const { permissions } = req.body;
+    if (permissions) target.permissions = permissions;
+    await target.save();
+
+    res.json({ success: true, message: 'Admin permissions updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update admin' });
+  }
+});
+
+app.delete('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Admin not found' });
+
+    if (target.isSuperAdmin) {
+      return res.status(400).json({ error: 'Cannot delete the super admin' });
+    }
+
+    if (target._id.toString() === req.userId.toString()) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    await User.findByIdAndDelete(target._id);
+    res.json({ success: true, message: 'Admin deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete admin' });
   }
 });
 

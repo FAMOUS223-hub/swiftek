@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  isSuperAdmin: { type: Boolean, default: false },
+  permissions: { type: [String], default: ['products', 'orders', 'users'] },
   verified: { type: Boolean, default: false },
   verificationToken: { type: String, default: null },
   status: { type: String, enum: ['active', 'suspended', 'revoked'], default: 'active' },

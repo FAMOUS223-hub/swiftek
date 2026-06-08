@@ -233,6 +233,13 @@ input, select, textarea { font-family: inherit; }
   justify-content: center;
   padding: 0 3px;
 }
+.notif-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 10px; background: var(--danger, #ff3b30);
+  color: #fff; font-size: 10px; font-weight: 700; line-height: 1;
+  vertical-align: middle; margin-left: 6px;
+}
 .menu-btn {
   display: none;
   font-size: 20px;
@@ -2139,6 +2146,20 @@ select.admin-input { cursor: pointer; }
   border: 1px dashed var(--border);
   border-radius: var(--radius);
 }
+.admin-meta-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; vertical-align: middle;
+}
+.admin-badge-super { background: #0071e3; color: #fff; }
+.admin-badge-admin { background: var(--bg-alt); color: var(--text-secondary); }
+.admin-perm-chip {
+  display: inline-block; padding: 2px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 500; background: var(--accent-light);
+  color: var(--accent);
+}
+.admin-checkboxes { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.admin-checkbox { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); cursor: pointer; }
+.admin-checkbox input { width: 16px; height: 16px; accent-color: var(--accent); }
 
 /* Form */
 .admin-form-card {
@@ -2688,20 +2709,50 @@ select.admin-input { cursor: pointer; }
 .auth-page-video .auth-card .auth-helper-error { color: #ff453a; }
 
 /* User Dropdown */
-.user-dropdown {
-  position: absolute; top: 100%; right: 0; margin-top: 4px;
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow-xl); min-width: 180px; z-index: 9999; overflow: hidden;
+.user-menu-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 100000; display: flex; align-items: center; justify-content: center;
+  padding: 20px; opacity: 0; transition: opacity 0.3s ease;
 }
-.user-dropdown-header {
-  padding: 12px 14px; font-size: 13px; font-weight: 600; color: var(--text);
-  border-bottom: 1px solid var(--border-light); background: var(--bg-alt);
+.user-menu-overlay.open { opacity: 1; }
+.user-menu-panel {
+  background: var(--card); border-radius: 20px; width: 100%; max-width: 360px;
+  overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  transform: scale(0.9) translateY(20px); transition: transform 0.3s ease;
 }
-.user-dropdown a {
-  display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; font-weight: 500;
-  color: var(--text-secondary); text-decoration: none; transition: var(--transition);
+.user-menu-overlay.open .user-menu-panel { transform: scale(1) translateY(0); }
+.user-menu-close {
+  position: absolute; top: 12px; right: 12px; width: 32px; height: 32px;
+  border-radius: 50%; border: none; background: var(--bg-alt);
+  font-size: 20px; line-height: 1; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--transition);
 }
-.user-dropdown a:hover { background: var(--bg-alt); color: var(--text); }
+.user-menu-close:hover { background: var(--border); }
+.user-menu-header {
+  padding: 36px 24px 20px; text-align: center;
+  background: linear-gradient(180deg, var(--accent-light) 0%, var(--card) 100%);
+}
+.user-menu-avatar {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--accent);
+  color: #fff; font-size: 24px; font-weight: 700; display: flex;
+  align-items: center; justify-content: center; margin: 0 auto 12px;
+  box-shadow: 0 4px 12px rgba(0,113,227,0.3);
+}
+.user-menu-name { font-size: 18px; font-weight: 700; color: var(--text); }
+.user-menu-email { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+.user-menu-links { padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+.user-menu-link {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; border-radius: 12px; border: none; background: transparent;
+  font-size: 15px; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; cursor: pointer; transition: var(--transition);
+}
+.user-menu-link:hover { background: var(--bg-alt); color: var(--text); }
+.user-menu-link i { width: 20px; text-align: center; font-size: 16px; }
+.user-menu-link-danger { color: var(--danger); }
+.user-menu-link-danger:hover { background: var(--danger-light, #fef2f2); }
 
 /* Order History */
 .orders-page { padding: 28px; min-height: 60vh; }

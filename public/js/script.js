@@ -885,54 +885,90 @@ function updateHeaderUser() {
   if (!btn) return;
   const token = getUserToken ? getUserToken() : null;
   const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || 'null'); } catch(e) { return null; } })();
+
+  function buildBadge(count) {
+    if (count < 1) return '';
+    return `<span class="notif-badge">${count > 99 ? '99+' : count}</span>`;
+  }
+
+  async function fetchAndBadge() {
+    try {
+      const data = await fetchPendingOrderCount();
+      const count = data.count || 0;
+      if (count > 0) {
+        const existing = btn.querySelector('.notif-badge');
+        if (existing) existing.textContent = count > 99 ? '99+' : count;
+        else btn.insertAdjacentHTML('beforeend', buildBadge(count));
+      }
+    } catch (e) {}
+  }
+
   if (token && userData) {
     if (userData.role === 'admin') {
       btn.innerHTML = '<i class="fas fa-user-shield"></i>';
       btn.title = 'Admin Panel';
       btn.href = 'admin.html';
       btn.onclick = null;
+      fetchAndBadge();
     } else {
       btn.innerHTML = '<i class="fas fa-user-check"></i>';
       btn.title = userData.name || 'Account';
       btn.href = '#';
       btn.onclick = function(e) {
         e.preventDefault();
-        const existing = document.querySelector('.user-dropdown');
-        if (existing) {
-          existing.remove();
-          return;
-        }
-        const div = document.createElement('div');
-        div.className = 'user-dropdown';
-        div.innerHTML = `
-          <div class="user-dropdown-header">
-            <div style="font-weight:700;font-size:14px;">${escapeHtml(userData.name)}</div>
-            <div style="font-size:11px;color:var(--text-tertiary);font-weight:400;">${escapeHtml(userData.email)}</div>
+        const existing = document.querySelector('.user-menu-overlay');
+        if (existing) { existing.remove(); return; }
+        const overlay = document.createElement('div');
+        overlay.className = 'user-menu-overlay';
+        overlay.innerHTML = `
+          <div class="user-menu-panel">
+            <button class="user-menu-close" aria-label="Close">&times;</button>
+            <div class="user-menu-header">
+              <div class="user-menu-avatar">${(userData.name || 'U')[0].toUpperCase()}</div>
+              <div class="user-menu-name">${escapeHtml(userData.name)}</div>
+              <div class="user-menu-email">${escapeHtml(userData.email)}</div>
+            </div>
+            <div class="user-menu-links">
+              <button id="user-edit-profile-link" class="user-menu-link"><i class="fas fa-user-edit"></i> Edit Profile</button>
+              <a href="order-history.html" class="user-menu-link" id="user-order-history-link"><i class="fas fa-box"></i> Order History</a>
+              <button id="user-logout-link" class="user-menu-link user-menu-link-danger"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
           </div>
-          <a href="#" id="user-edit-profile-link"><i class="fas fa-user-edit"></i> Edit Profile</a>
-          <a href="order-history.html"><i class="fas fa-box"></i> Order History</a>
-          <a href="#" id="user-logout-link"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
         `;
-        btn.parentElement.style.position = 'relative';
-        btn.parentElement.appendChild(div);
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('open'));
+
+        fetchPendingOrderCount().then(d => {
+          const c = d.count || 0;
+          if (c > 0) {
+            const link = overlay.querySelector('#user-order-history-link');
+            if (link) link.insertAdjacentHTML('beforeend', buildBadge(c));
+          }
+        }).catch(() => {});
+
+        overlay.querySelector('.user-menu-close').addEventListener('click', () => {
+          overlay.classList.remove('open');
+          setTimeout(() => overlay.remove(), 300);
+        });
+        overlay.addEventListener('click', function onBackdrop(e2) {
+          if (e2.target === overlay) {
+            overlay.classList.remove('open');
+            setTimeout(() => overlay.remove(), 300);
+          }
+        });
         document.getElementById('user-logout-link').addEventListener('click', async (e2) => {
           e2.preventDefault();
           if (typeof userLogoutApi === 'function') await userLogoutApi().catch(() => {});
-          div.remove();
-          window.location.reload();
+          overlay.classList.remove('open');
+          setTimeout(() => { overlay.remove(); window.location.reload(); }, 300);
         });
         document.getElementById('user-edit-profile-link').addEventListener('click', (e2) => {
           e2.preventDefault();
-          div.remove();
-          showUserProfileModal();
-        });
-        document.addEventListener('click', function closeDropdown(e2) {
-          if (!e2.target.closest('.header-actions')) {
-            div.remove();
-            document.removeEventListener('click', closeDropdown);
-          }
+          overlay.classList.remove('open');
+          setTimeout(() => { overlay.remove(); showUserProfileModal(); }, 300);
         });
       };
+      fetchAndBadge();
     }
   } else {
     btn.innerHTML = '<i class="fas fa-user"></i>';

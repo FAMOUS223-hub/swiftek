@@ -29,6 +29,9 @@ if (loginForm) {
       }
       localStorage.setItem('swiftek_admin_token', result.token);
       localStorage.setItem('swiftek_admin_logged_in', 'true');
+      if (result.user) {
+        localStorage.setItem('swiftek_user_data', JSON.stringify({ ...result.user, role: result.role }));
+      }
       showDashboard();
     } catch {
       loginError.textContent = 'Invalid email or password';
@@ -41,6 +44,12 @@ if (loginForm) {
 async function showDashboard() {
   loginScreen.classList.add('hidden');
   dashboard.classList.remove('hidden');
+
+  const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || '{}'); } catch(e) { return {}; } })();
+  const adminsBtn = document.getElementById('admins-btn');
+  if (adminsBtn) {
+    adminsBtn.style.display = userData.isSuperAdmin ? '' : 'none';
+  }
 
   var heroVideo = document.querySelector('.admin-hero-video');
   if (heroVideo) {
@@ -62,6 +71,7 @@ async function showDashboard() {
 function checkLogin() {
   if (localStorage.getItem('swiftek_admin_token')) {
     showDashboard();
+    fetchAndBadgeAdminOrders();
     return;
   }
   const userToken = localStorage.getItem('swiftek_user_token');
@@ -72,9 +82,23 @@ function checkLogin() {
         localStorage.setItem('swiftek_admin_token', userToken);
         localStorage.setItem('swiftek_admin_logged_in', 'true');
         showDashboard();
+        fetchAndBadgeAdminOrders();
       }
     } catch(e) {}
   }
+}
+
+async function fetchAndBadgeAdminOrders() {
+  try {
+    const data = await fetchPendingOrderCount();
+    const count = data.count || 0;
+    const btn = document.getElementById('orders-btn');
+    if (btn && count > 0) {
+      const existing = btn.querySelector('.notif-badge');
+      if (existing) existing.textContent = count > 99 ? '99+' : count;
+      else btn.insertAdjacentHTML('beforeend', `<span class="notif-badge">${count > 99 ? '99+' : count}</span>`);
+    }
+  } catch (e) {}
 }
 
 document.getElementById('logout-btn')?.addEventListener('click', async () => {
@@ -271,6 +295,7 @@ const SECTION_MAP = {
   users:     { panel: 'users-section', render: 'renderUsers',     hidesList: true },
   'user-orders': { panel: 'user-orders-section', render: 'renderUserOrders', hidesList: true },
   orders:    { panel: 'orders-section', render: 'renderAllOrders', hidesList: true },
+  admins:    { panel: 'admins-section', render: 'renderAdmins',   hidesList: true },
   settings:  { panel: 'settings-section', render: null,           hidesList: true }
 };
 
@@ -1036,6 +1061,132 @@ function showToast(message) {
   toast.innerHTML = message;
   container.appendChild(toast);
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2600);
+}
+
+/* ───── Admin Management ───── */
+
+async function renderAdmins() {
+  const container = document.getElementById('admins-list');
+  if (!container) return;
+  container.innerHTML = skeletonCards(3);
+
+  try {
+    const admins = await fetchAdmins();
+    const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || '{}'); } catch(e) { return {}; } })();
+    const currentEmail = userData.email || '';
+
+    let html = `
+      <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button class="admin-btn admin-btn-primary" onclick="showCreateAdminModal()"><i class="fas fa-plus"></i> Add Admin</button>
+      </div>
+    `;
+
+    if (!admins || admins.length === 0) {
+      html += '<div class="empty-state"><i class="fas fa-user-shield" style="font-size:48px;color:var(--text-tertiary);margin-bottom:12px;display:block;"></i><p style="color:var(--text-secondary);">No admins found.</p></div>';
+    } else {
+      admins.forEach(admin => {
+        const isSelf = admin.email === currentEmail;
+        const badge = admin.isSuperAdmin
+          ? '<span class="admin-meta-badge admin-badge-super">Super Admin</span>'
+          : '<span class="admin-meta-badge admin-badge-admin">Admin</span>';
+
+        const permChips = (admin.permissions || []).map(p =>
+          `<span class="admin-perm-chip">${p.charAt(0).toUpperCase() + p.slice(1)}</span>`
+        ).join('');
+
+        html += `
+          <div class="admin-user-item">
+            <div class="admin-product-info" style="flex:1;">
+              <div class="admin-product-name">
+                ${escapeHtml(admin.name)} ${badge}
+                ${isSelf ? '<span class="admin-meta-badge" style="background:var(--accent-light);color:var(--accent);">You</span>' : ''}
+              </div>
+              <div class="admin-product-meta">${escapeHtml(admin.email)}</div>
+              <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${permChips}</div>
+              <div class="admin-product-meta" style="margin-top:6px;">Created ${new Date(admin.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div class="admin-product-actions">
+              ${!admin.isSuperAdmin
+                ? `<button class="admin-btn-sm admin-btn-primary" onclick="showEditAdminModal('${admin._id}')" title="Edit permissions"><i class="fas fa-edit"></i></button>
+                   <button class="admin-btn-sm admin-btn-danger" onclick="deleteAdmin('${admin._id}')" title="Remove admin"><i class="fas fa-trash"></i></button>`
+                : '<span style="font-size:12px;color:var(--text-tertiary);">Full access</span>'
+              }
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><p style="color:var(--danger);">Failed to load admins.</p></div>`;
+  }
+}
+
+function showCreateAdminModal() {
+  document.getElementById('admin-modal-title').innerHTML = '<i class="fas fa-user-shield"></i> New Admin';
+  document.getElementById('admin-submit-btn').textContent = 'Create Admin';
+  document.getElementById('admin-editing-id').value = '';
+  document.getElementById('admin-form').reset();
+  document.getElementById('admin-password-field').style.display = '';
+  document.getElementById('admin-password').required = true;
+  document.querySelectorAll('#admin-form .admin-checkbox input').forEach(cb => cb.checked = true);
+  document.getElementById('admin-modal').classList.remove('hidden');
+}
+
+function showEditAdminModal(adminId) {
+  document.getElementById('admin-modal-title').innerHTML = '<i class="fas fa-user-shield"></i> Edit Admin Permissions';
+  document.getElementById('admin-submit-btn').textContent = 'Update Permissions';
+  document.getElementById('admin-editing-id').value = adminId;
+  document.getElementById('admin-password-field').style.display = 'none';
+  document.getElementById('admin-password').required = false;
+  document.getElementById('admin-form').reset();
+  document.getElementById('admin-modal').classList.remove('hidden');
+
+  fetchAdmins().then(admins => {
+    const admin = admins.find(a => a._id === adminId);
+    if (!admin) return;
+    document.getElementById('admin-name').value = admin.name || '';
+    document.getElementById('admin-email').value = admin.email || '';
+    document.querySelectorAll('#admin-form .admin-checkbox input').forEach(cb => {
+      cb.checked = (admin.permissions || []).includes(cb.value);
+    });
+  }).catch(() => {});
+}
+
+document.getElementById('admin-form')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const editingId = document.getElementById('admin-editing-id').value;
+  const name = document.getElementById('admin-name').value.trim();
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  const perms = [];
+  document.querySelectorAll('#admin-form .admin-checkbox input:checked').forEach(cb => perms.push(cb.value));
+
+  try {
+    if (editingId) {
+      await updateAdminPermissionsApi(editingId, { permissions: perms });
+      showToast('Permissions updated');
+    } else {
+      await createAdminApi({ name, email, password, permissions: perms });
+      showToast('Admin created');
+    }
+    document.getElementById('admin-modal').classList.add('hidden');
+    renderAdmins();
+  } catch (err) {
+    showToast(err.message || 'Failed');
+  }
+});
+
+async function deleteAdmin(adminId) {
+  if (!confirm('Remove this admin?')) return;
+  try {
+    await deleteAdminApi(adminId);
+    showToast('Admin removed');
+    renderAdmins();
+  } catch (err) {
+    showToast(err.message || 'Failed to delete');
+  }
 }
 
 /* ───── Skeleton Helpers ───── */
