@@ -14,7 +14,7 @@ const orderSchema = new mongoose.Schema({
   orderRef: { type: String, required: true, unique: true },
   items: [orderItemSchema],
   total: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'confirmed', 'delivered', 'cancelled'], default: 'pending' },
   customerInfo: {
     name: { type: String, default: '' },
     email: { type: String, default: '' },

@@ -645,7 +645,7 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
 app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -656,19 +656,20 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
     await Order.findByIdAndUpdate(req.params.id, { status });
     res.json({ success: true });
 
-    if ((status === 'confirmed' || status === 'cancelled') && order.userId?.email) {
+    if (status !== 'pending' && order.userId?.email) {
       const user = order.userId;
       const itemsList = order.items.map(i =>
         `<tr><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;">${escapeHtml(i.name)}${i.specs ? '<br><span style="font-size:12px;color:#8e8e93;">' + escapeHtml(i.specs) + '</span>' : ''}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:center;">x${i.qty}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:right;">GH₵ ${i.price.toFixed(2)}</td></tr>`
       ).join('');
 
-      const isConfirmed = status === 'confirmed';
-      const badgeColor = isConfirmed ? '#30d158' : '#ff453a';
-      const badgeIcon = isConfirmed ? '✓' : '✕';
-      const heading = isConfirmed ? 'Order Confirmed' : 'Order Cancelled';
-      const message = isConfirmed
-        ? 'Good news! Your order has been confirmed and is being processed. We will notify you once it ships.'
-        : 'Your order has been cancelled. If you have any questions, please contact our support team.';
+      const statusConfig = {
+        confirmed: { badgeColor: '#30d158', badgeIcon: '✓', heading: 'Order Confirmed', message: 'Good news! Your order has been confirmed and is being processed.' },
+        delivered: { badgeColor: '#30d158', badgeIcon: '✓', heading: 'Order Delivered', message: 'Your order has been delivered. Thank you for shopping with SwifTek!' },
+        cancelled: { badgeColor: '#ff453a', badgeIcon: '✕', heading: 'Order Cancelled', message: 'Your order has been cancelled. If you have any questions, please contact our support team.' }
+      };
+
+      const cfg = statusConfig[status] || { badgeColor: '#0071e3', badgeIcon: 'ℹ', heading: 'Order Updated', message: 'Your order status has been updated.' };
+      const { badgeColor, badgeIcon, heading, message } = cfg;
 
       const emailHtml = `
         <!DOCTYPE html>
@@ -683,7 +684,6 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
               <td align="center" style="padding:40px 16px;">
                 <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
 
-                  <!-- Letterhead -->
                   <tr>
                     <td style="background:linear-gradient(135deg,#0071e3 0%,#002b5e 100%);border-radius:16px 16px 0 0;padding:36px 32px 28px;text-align:center;">
                       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
@@ -702,11 +702,9 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
                     </td>
                   </tr>
 
-                  <!-- Body -->
                   <tr>
                     <td style="background:#ffffff;padding:32px;border-radius:0 0 16px 16px;">
 
-                      <!-- Status Badge -->
                       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
                         <tr>
                           <td align="center" style="width:72px;height:72px;border-radius:50%;background:${badgeColor}20;text-align:center;">
@@ -718,7 +716,6 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
                       <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;text-align:center;margin:0 0 6px;letter-spacing:-0.3px;">${heading}</h1>
                       <p style="font-size:16px;color:#6e6e73;text-align:center;margin:0 0 28px;line-height:1.5;">${message}</p>
 
-                      <!-- Order Reference -->
                       <table role="presentation" cellpadding="0" cellspacing="0" style="background:#f5f5f7;border-radius:12px;width:100%;margin-bottom:24px;">
                         <tr>
                           <td style="padding:16px 20px;">
@@ -736,13 +733,11 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
                         </tr>
                       </table>
 
-                      <!-- Items Table -->
                       <h3 style="font-size:14px;font-weight:600;color:#1d1d1f;margin:0 0 10px;">Items Ordered</h3>
                       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
                         ${itemsList}
                       </table>
 
-                      <!-- Total -->
                       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                         <tr>
                           <td style="border-top:2px solid #1d1d1f;padding:12px 0 0;">
@@ -756,7 +751,6 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
                         </tr>
                       </table>
 
-                      <!-- Footer Info -->
                       <p style="font-size:13px;color:#8e8e93;text-align:center;margin:0 0 4px;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Store</p>
                       <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:0;">Accra, Ghana &middot; Built by Famous Tech</p>
                       <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:16px 0 0;">Need help? Contact us on <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">WhatsApp</a></p>
@@ -772,9 +766,7 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
         </html>
       `;
 
-      const subject = isConfirmed
-        ? `Order Confirmed — ${order.orderRef} — SwifTek Accessories`
-        : `Order Cancelled — ${order.orderRef} — SwifTek Accessories`;
+      const subject = `${heading} — ${order.orderRef} — SwifTek Accessories`;
 
       sendEmail({ to: user.email, subject, html: emailHtml }).catch(err => {
         console.error('[ORDER EMAIL FAILED]', err.message);

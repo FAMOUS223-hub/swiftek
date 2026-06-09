@@ -881,6 +881,8 @@ async function renderUserOrders() {
 
 /* ───── Orders ───── */
 
+const statusColors = { pending: '#ff9f0a', confirmed: '#0071e3', delivered: '#30d158', cancelled: '#ff453a' };
+
 async function renderAllOrders() {
   const container = document.getElementById('orders-list-admin');
   const section = document.getElementById('orders-section');
@@ -897,14 +899,13 @@ async function renderAllOrders() {
     <div class="admin-product-item" style="flex-direction:column;align-items:stretch;">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>
-          <div class="admin-product-name">${escapeHtml(order.orderRef)}</div>
+          <div class="admin-product-name">${escapeHtml(order.orderRef)} <span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;background:${statusColors[order.status] || '#86868b'}20;color:${statusColors[order.status] || '#86868b'};">${order.status}</span></div>
           <div class="admin-product-meta">${order.userId ? escapeHtml(order.userId.name || 'Unknown') + ' · ' + escapeHtml(order.userId.email || '') : 'Unknown User'} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <select class="admin-order-status-select" onchange="updateOrderStatus('${order._id}', this.value)">
             <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
             <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-            <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Shipped</option>
             <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
             <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
           </select>
@@ -922,6 +923,8 @@ async function updateOrderStatus(orderId, status) {
   try {
     await updateOrderStatusApi(orderId, status);
     showToast('Order status updated');
+    fetchAndBadgeAdminOrders();
+    renderAllOrders();
   } catch (err) {
     showToast('Failed to update status');
   }
