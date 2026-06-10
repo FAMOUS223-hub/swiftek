@@ -6,29 +6,46 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
 const signupOtpCss = fs.readFileSync(
   path.join(__dirname, 'public', 'css', 'email-signup-otp.css'),
   'utf8'
 );
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
+dns.resolve4(process.env.SMTP_HOST, (err, addresses) => {
+  if (err) console.error('[SMTP DNS] Failed to resolve', process.env.SMTP_HOST, err.message);
+  else console.log('[SMTP DNS]', process.env.SMTP_HOST, '->', addresses);
 });
 
-function sendEmail({ to, subject, html }) {
-  return transporter.sendMail({
-    from: process.env.SMTP_FROM,
-    to,
-    subject,
-    html
-  });
+const smtpConfigs = [
+  {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  },
+  {
+    host: process.env.SMTP_HOST,
+    port: 465,
+    secure: true,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  }
+];
+
+async function sendEmail({ to, subject, html }) {
+  const lastErr = null;
+  for (const config of smtpConfigs) {
+    try {
+      const t = nodemailer.createTransport(config);
+      await t.verify();
+      const info = await t.sendMail({ from: process.env.SMTP_FROM, to, subject, html });
+      return info;
+    } catch (err) {
+      console.error('[SMTP] Config failed', config.host + ':' + config.port, err.message);
+    }
+  }
+  throw new Error('Could not send email via any SMTP configuration');
 }
 
 function escapeHtml(text) {
