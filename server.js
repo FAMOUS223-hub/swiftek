@@ -6,53 +6,88 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 const nodemailer = require('nodemailer');
-const dns = require('dns');
+const { Resolver } = require('dns');
 
 const signupOtpCss = fs.readFileSync(
   path.join(__dirname, 'public', 'css', 'email-signup-otp.css'),
   'utf8'
 );
 
-if (process.env.SMTP_HOST) {
-  dns.resolve4(process.env.SMTP_HOST, (err, addresses) => {
-    if (err) console.error('[SMTP DNS] Failed to resolve', process.env.SMTP_HOST, err.message);
-    else console.log('[SMTP DNS]', process.env.SMTP_HOST, '->', addresses);
-  });
+const dnsOverGoogle = new Resolver();
+dnsOverGoogle.setServers(['8.8.8.8', '1.1.1.1']);
+
+async function resolveSmtpHost(hostname) {
+  try {
+    const addrs = await dnsOverGoogle.resolve4(hostname);
+    console.log('[DNS]', hostname, 'via Google DNS ->', addrs);
+    return addrs;
+  } catch (err) {
+    console.error('[DNS] Failed to resolve', hostname, 'via Google DNS:', err.message);
+    return [];
+  }
 }
 
-function getSmtpConfigs() {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) return [];
-  const base = {
+function makeSmtpConfig(host, port, secure, user, pass, servername) {
+  const cfg = {
     host,
+    port,
+    secure,
     auth: { user, pass },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000
   };
-  return [
-    { ...base, port: parseInt(port || '587'), secure: false },
-    { ...base, port: 465, secure: true }
-  ];
+  if (servername) cfg.tls = { servername };
+  return cfg;
 }
 
 async function sendEmail({ to, subject, html }) {
-  const configs = getSmtpConfigs();
-  if (!configs.length) throw new Error('SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS)');
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const hostname = process.env.SMTP_HOST;
+  const from = process.env.SMTP_FROM || user || 'noreply@swiftek.com';
+
+  if (!hostname || !user || !pass) {
+    throw new Error('Set SMTP_HOST, SMTP_USER, and SMTP_PASS in environment variables');
+  }
+
+  const port587 = parseInt(process.env.SMTP_PORT || '587');
+  const configs = [
+    makeSmtpConfig(hostname, port587, false, user, pass),
+    makeSmtpConfig(hostname, 465, true, user, pass)
+  ];
+
   for (const config of configs) {
     try {
       const t = nodemailer.createTransport(config);
       const info = await t.sendMail({ from, to, subject, html });
+      console.log('[EMAIL] Sent via', config.host + ':' + config.port, 'to', to);
       return info;
     } catch (err) {
-      console.error('[SMTP] Config failed', config.host + ':' + config.port, err.message);
+      console.error('[EMAIL]', config.host + ':' + config.port, err.message);
     }
   }
-  throw new Error('Could not send email via any SMTP configuration');
+
+  console.log('[EMAIL] Standard SMTP failed, trying direct IP lookup via Google DNS...');
+  const ips = await resolveSmtpHost(hostname);
+  if (ips.length) {
+    for (const port of [port587, 465]) {
+      const secure = port === 465;
+      for (const ip of ips) {
+        try {
+          const cfg = makeSmtpConfig(ip, port, secure, user, pass, hostname);
+          const t = nodemailer.createTransport(cfg);
+          const info = await t.sendMail({ from, to, subject, html });
+          console.log('[EMAIL] Sent via', ip + ':' + port, 'to', to);
+          return info;
+        } catch (err) {
+          console.error('[EMAIL]', ip + ':' + port, err.message);
+        }
+      }
+    }
+  }
+
+  throw new Error('Could not send email. Your hosting provider blocks outbound SMTP. Add SENDGRID_API_KEY env var to use SendGrid API instead.');
 }
 
 function escapeHtml(text) {
