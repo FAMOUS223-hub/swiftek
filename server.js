@@ -359,8 +359,8 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
     console.log('[SIGNUP OTP] Sent to', normalized);
     res.json({ success: true, message: 'OTP sent to your email.' });
   } catch (err) {
-    console.error('[SEND-SIGNUP-OTP ERROR]', err.message);
-    res.status(500).json({ error: 'Failed to send OTP' });
+    console.error('[SEND-SIGNUP-OTP ERROR]', err);
+    res.status(500).json({ error: 'Failed to send OTP: ' + err.message });
   }
 });
 
