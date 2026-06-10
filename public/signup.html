@@ -241,10 +241,10 @@
           otpStatus.className = 'auth-helper auth-helper-error';
           otpStatus.innerHTML = '<i class="fas fa-times-circle"></i> ' + (result.error || 'Invalid code');
         }
-      } catch (err) {
+      } catch {
         otpBoxes.forEach(b => { b.classList.remove('verifying', 'valid'); b.classList.add('invalid'); });
         otpStatus.className = 'auth-helper auth-helper-error';
-        otpStatus.innerHTML = '<i class="fas fa-times-circle"></i> ' + (err.message || 'Verification failed');
+        otpStatus.innerHTML = '<i class="fas fa-times-circle"></i> Verification failed';
       }
     }
 
@@ -309,9 +309,6 @@
       bottomLink.classList.remove('hidden');
       step2Error.classList.add('hidden');
       step2Success.classList.add('hidden');
-      sendOtpBtn.disabled = false;
-      sendOtpBtn.classList.remove('btn-loading');
-      sendOtpBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
     }
 
     changeEmailLink.addEventListener('click', (e) => { e.preventDefault(); goToStep1(); });
@@ -323,18 +320,14 @@
       try {
         const result = await sendSignupOtpApi(currentEmail);
         if (result.success) {
-          document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled', 'valid', 'invalid', 'verifying'); });
+          document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
           document.querySelectorAll('.otp-box')[0].focus();
           startOtpTimer(Date.now() + 600000);
           step2Error.classList.add('hidden');
-          otpStatus.classList.add('hidden');
         }
       } catch (err) {
         step2Error.textContent = err.message;
         step2Error.classList.remove('hidden');
-        resendLink.classList.remove('disabled');
-        resendLink.textContent = 'Resend OTP';
-        return;
       }
       resendLink.textContent = 'Resend OTP';
       setTimeout(() => resendLink.classList.remove('disabled'), 60000);
