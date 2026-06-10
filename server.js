@@ -45,6 +45,7 @@ const Session = require('./models/Session');
 const Config = require('./models/Config');
 const User = require('./models/User');
 const Order = require('./models/Order');
+const EmailVerification = require('./models/EmailVerification');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -224,6 +225,235 @@ app.post('/api/auth/check-email', async (req, res) => {
     res.json({ available: !existing });
   } catch (err) {
     res.status(500).json({ available: false, error: 'Check failed' });
+  }
+});
+
+app.post('/api/auth/send-signup-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const normalized = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: normalized });
+    if (existing) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    const recent = await EmailVerification.findOne({ email: normalized }).sort({ sentAt: -1 });
+    if (recent && (Date.now() - new Date(recent.sentAt).getTime()) < 60000) {
+      const remaining = Math.ceil((60000 - (Date.now() - new Date(recent.sentAt).getTime())) / 1000);
+      return res.status(429).json({ error: `Please wait ${remaining}s before requesting a new OTP.` });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 600000);
+    await EmailVerification.deleteMany({ email: normalized });
+    await EmailVerification.create({
+      email: normalized,
+      otp,
+      expiresAt,
+      sentAt: new Date()
+    });
+
+    const expiryTime = expiresAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const expiryDate = expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isToday = expiresAt.toDateString() === new Date().toDateString();
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light">
+        <style>
+          @media screen and (max-width:480px) {
+            .otp-digits { font-size:20px !important; letter-spacing:3px !important; padding:16px 12px !important; }
+          }
+        </style>
+      </head>
+      <body style="margin:0;padding:0;background-color:#f2f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f2f5;">
+          <tr>
+            <td align="center" style="padding:48px 16px;">
+              <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+
+                <!-- Letterhead -->
+                <tr>
+                  <td style="background:linear-gradient(135deg,#0071e3 0%,#003a70 50%,#001d3d 100%);border-radius:20px 20px 0 0;padding:40px 32px 28px;text-align:center;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
+                      <tr>
+                        <td align="center" style="width:64px;height:64px;background:rgba(255,255,255,0.12);border-radius:18px;">
+                          <span style="font-size:32px;font-weight:800;color:#ffffff;line-height:64px;letter-spacing:-1px;">S</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <h1 style="font-size:13px;font-weight:700;color:#ffffff;margin:0 0 2px;letter-spacing:3px;text-transform:uppercase;">SwifTek</h1>
+                    <p style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.45);margin:0;letter-spacing:5px;text-transform:uppercase;">Accessories</p>
+                    <div style="width:48px;height:3px;background:linear-gradient(90deg,#0071e3,#00a8ff);border-radius:2px;margin:16px auto 0;"></div>
+                  </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                  <td style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 20px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.04);">
+
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+                      <tr>
+                        <td align="center" valign="middle" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#e8f4fd,#d0eafc);font-size:32px;line-height:32px;">✉️</td>
+                      </tr>
+                    </table>
+
+                    <h1 style="font-size:26px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.5px;">Verify your email</h1>
+                    <p style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.6;">Hi there,<br>use the code below to verify your <strong style="color:#1d1d1f;">SwifTek Accessories</strong> account.</p>
+
+                    <!-- OTP Box -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;background:#f5f5f7;border-radius:16px;width:100%;">
+                      <tr>
+                        <td align="center" class="otp-digits" style="padding:20px 16px;letter-spacing:4px;font-size:16px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums;white-space:nowrap;">${otp}</td>
+                      </tr>
+                    </table>
+
+                    <p style="font-size:14px;color:#8e8e93;margin:0 0 24px;line-height:1.6;">Code expires <strong style="color:#1d1d1f;">${isToday ? 'today at' : expiryDate} ${expiryTime}</strong> &middot; <strong style="color:#1d1d1f;">10:00</strong> minutes remaining. If you didn't request this, you can safely ignore this email.</p>
+
+                    <!-- Divider -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+                      <tr>
+                        <td style="border-bottom:1px solid #e8e8ed;line-height:1px;height:1px;">&nbsp;</td>
+                      </tr>
+                    </table>
+
+                    <p style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>
+                    <p style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await sendEmail({
+      to: normalized,
+      subject: 'Verify your email — SwifTek Accessories',
+      html: emailHtml
+    });
+
+    console.log('[SIGNUP OTP] Sent to', normalized);
+    res.json({ success: true, message: 'OTP sent to your email.' });
+  } catch (err) {
+    console.error('[SEND-SIGNUP-OTP ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+app.post('/api/auth/check-signup-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ valid: false, error: 'Email and OTP are required' });
+
+    const normalized = email.toLowerCase().trim();
+    const record = await EmailVerification.findOne({ email: normalized });
+
+    if (!record) {
+      return res.json({ valid: false, error: 'No OTP request found. Please request a new one.' });
+    }
+    if (record.verified) {
+      return res.json({ valid: false, error: 'This email has already been verified.' });
+    }
+    if (new Date() > record.expiresAt) {
+      return res.json({ valid: false, error: 'OTP has expired. Please request a new one.' });
+    }
+    if (record.attempts >= 5) {
+      return res.json({ valid: false, error: 'Too many failed attempts. Please request a new OTP.' });
+    }
+    if (record.otp !== otp) {
+      record.attempts += 1;
+      await record.save();
+      return res.json({ valid: false, error: 'Invalid OTP. Please check and try again.' });
+    }
+
+    res.json({ valid: true });
+  } catch (err) {
+    console.error('[CHECK-SIGNUP-OTP ERROR]', err.message);
+    res.status(500).json({ valid: false, error: 'Failed to verify OTP' });
+  }
+});
+
+app.post('/api/auth/complete-signup', async (req, res) => {
+  try {
+    const { email, otp, name, password } = req.body;
+    if (!email || !otp || !name || !password) {
+      return res.status(400).json({ error: 'Email, OTP, name, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const normalized = email.toLowerCase().trim();
+    const record = await EmailVerification.findOne({ email: normalized });
+
+    if (!record) {
+      return res.status(400).json({ error: 'No OTP request found. Please request a new OTP.' });
+    }
+    if (record.verified) {
+      return res.status(400).json({ error: 'This email has already been verified.' });
+    }
+    if (new Date() > record.expiresAt) {
+      await EmailVerification.deleteOne({ _id: record._id });
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+    if (record.attempts >= 5) {
+      await EmailVerification.deleteOne({ _id: record._id });
+      return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
+    }
+    if (record.otp !== otp) {
+      record.attempts += 1;
+      await record.save();
+      return res.status(400).json({ error: 'Invalid OTP. Please check and try again.' });
+    }
+
+    const existing = await User.findOne({ email: normalized });
+    if (existing) {
+      await EmailVerification.deleteOne({ _id: record._id });
+      return res.status(400).json({ error: 'An account with this email already exists.' });
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalized,
+      password,
+      verified: true
+    });
+
+    await EmailVerification.deleteOne({ _id: record._id });
+
+    const token = generateToken();
+    await Session.create({
+      token,
+      userId: user._id,
+      role: user.role,
+      createdAt: new Date(),
+      lastUsed: new Date()
+    });
+
+    console.log('[SIGNUP] User created and auto-logged in:', user.email);
+    res.json({
+      success: true,
+      message: 'Account created successfully!',
+      token,
+      role: user.role,
+      user: { id: user._id, name: user.name, email: user.email, isSuperAdmin: false }
+    });
+  } catch (err) {
+    console.error('[COMPLETE-SIGNUP ERROR]', err.message);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'An account with this email already exists.' });
+    }
+    res.status(500).json({ error: 'Failed to create account' });
   }
 });
 

@@ -115,6 +115,23 @@ async function registerApi(name, email, password) {
   return apiPost('/api/auth/register', { name, email, password }, true);
 }
 
+async function sendSignupOtpApi(email) {
+  return apiPost('/api/auth/send-signup-otp', { email }, true);
+}
+
+async function checkSignupOtpApi(email, otp) {
+  return apiPost('/api/auth/check-signup-otp', { email, otp }, true);
+}
+
+async function completeSignupApi(email, otp, name, password) {
+  const result = await apiPost('/api/auth/complete-signup', { email, otp, name, password }, true);
+  if (result.token) {
+    localStorage.setItem('swiftek_user_token', result.token);
+    localStorage.setItem('swiftek_user_data', JSON.stringify({ ...result.user, role: result.role }));
+  }
+  return result;
+}
+
 async function checkEmailApi(email) {
   return apiPost('/api/auth/check-email', { email }, true);
 }

@@ -7,6 +7,36 @@
   <meta name="description" content="Create a SwifTek account for faster checkout and order tracking.">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .step-indicator { display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px; }
+    .step-dot { width:10px;height:10px;border-radius:50%;background:#e8e8ed;transition:all 0.3s; }
+    .step-dot.active { background:#0071e3;width:28px;border-radius:5px; }
+    .step-dot.done { background:#30d158; }
+    .step-line { width:32px;height:2px;background:#e8e8ed;border-radius:1px; }
+    .step-line.done { background:#30d158; }
+    .otp-input-wrap { display:flex;gap:10px;justify-content:center;margin-bottom:8px; }
+    .otp-input-wrap input { width:48px;height:56px;text-align:center;font-size:24px;font-weight:600;border:2px solid #e8e8ed;border-radius:12px;outline:none;transition:border-color 0.2s;background:#f9f9fb;color:#1d1d1f; }
+    .otp-input-wrap input:focus { border-color:#0071e3;background:#fff;box-shadow:0 0 0 3px rgba(0,113,227,0.12); }
+    .otp-input-wrap input.filled { border-color:#30d158;background:#f0faf0; }
+    .otp-input-wrap input.valid { border-color:#30d158;background:#e8f8ed; }
+    .otp-input-wrap input.invalid { border-color:#ff453a;background:#fff2f2;animation:shake 0.4s; }
+    .otp-input-wrap input.verifying { border-color:#0071e3;background:#e8f4fd; }
+    .otp-timer { background:#f5f5f7;border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:14px;color:#6e6e73;border:1px solid #e8e8ed; }
+    .otp-timer strong { color:#1d1d1f;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.5px; }
+    .otp-timer.expired { border-color:#ffd5d2;background:#fff5f5; }
+    .otp-timer.expired strong { color:#ff453a; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .auth-helper-success { color:#30d158; }
+    .auth-step { transition:opacity 0.3s,transform 0.3s; }
+    .auth-step.hidden-step { display:none; }
+    .otp-email-display { text-align:center;margin-bottom:16px;font-size:14px;color:#6e6e73; }
+    .otp-email-display strong { color:#1d1d1f; }
+    .resend-link { color:#0071e3;cursor:pointer;text-decoration:none;font-weight:500; }
+    .resend-link:hover { text-decoration:underline; }
+    .resend-link.disabled { color:#aeaeb2;cursor:not-allowed;text-decoration:none; }
+    .btn-loading { pointer-events:none;opacity:0.7; }
+    .btn-loading i { margin-right:6px; }
+  </style>
 </head>
 <body class="auth-video-page">
 
@@ -29,45 +59,91 @@
 
   <main class="auth-page auth-page-video">
     <div class="auth-card">
-      <div class="auth-logo">
-        <span class="logo-icon">S</span>
+
+      <div class="step-indicator">
+        <span class="step-dot active" id="step1-dot"></span>
+        <span class="step-line" id="step1-line"></span>
+        <span class="step-dot" id="step2-dot"></span>
       </div>
-      <h1>Create Account</h1>
-      <p class="auth-desc">Join SwifTek Accessories today</p>
 
-      <form id="signup-form">
-        <div class="auth-field">
-          <label for="signup-name">Full Name</label>
-          <input type="text" id="signup-name" class="auth-input" placeholder="Your full name" required autocomplete="name">
+      <!-- Step 1: Email -->
+      <div class="auth-step" id="step-1">
+        <div class="auth-logo">
+          <span class="logo-icon">S</span>
         </div>
-        <div class="auth-field auth-field-email">
-          <label for="signup-email">Email</label>
-          <div class="auth-input-wrap">
-            <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
-            <span id="email-status" class="auth-input-icon"></span>
-          </div>
-          <p id="email-helper" class="auth-helper hidden"></p>
-        </div>
-        <div class="auth-field">
-          <label for="signup-password">Password</label>
-          <div class="password-input-wrap">
-            <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-          </div>
-        </div>
-        <div class="auth-field">
-          <label for="signup-confirm">Confirm Password</label>
-          <div class="password-input-wrap">
-            <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-          </div>
-        </div>
-        <p id="signup-error" class="auth-error hidden"></p>
-        <p id="signup-success" class="auth-success hidden"></p>
-        <button type="submit" class="auth-btn">Create Account</button>
-      </form>
+        <h1>Create Account</h1>
+        <p class="auth-desc">Join SwifTek Accessories today</p>
 
-      <p class="auth-alt">Already have an account? <a href="login.html">Sign in</a></p>
+        <form id="step1-form">
+          <div class="auth-field auth-field-email">
+            <label for="signup-email">Email</label>
+            <div class="auth-input-wrap">
+              <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
+              <span id="email-status" class="auth-input-icon"></span>
+            </div>
+            <p id="email-helper" class="auth-helper hidden"></p>
+          </div>
+          <p id="step1-error" class="auth-error hidden"></p>
+          <button type="submit" class="auth-btn" id="send-otp-btn"><i class="fas fa-paper-plane"></i> Send OTP</button>
+        </form>
+      </div>
+
+      <!-- Step 2: OTP + Details -->
+      <div class="auth-step hidden-step" id="step-2">
+        <div class="auth-logo">
+          <span class="logo-icon">S</span>
+        </div>
+        <h1>Verify &amp; Complete</h1>
+        <p class="auth-desc">Enter the code sent to your email</p>
+
+        <div class="otp-email-display">Code sent to <strong id="otp-email-label"></strong></div>
+
+        <form id="step2-form">
+          <div class="auth-field">
+            <label>Verification Code</label>
+            <div class="otp-input-wrap" id="otp-container">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" autocomplete="one-time-code">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box">
+              <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box">
+            </div>
+          </div>
+
+          <div id="otp-status" class="auth-helper hidden" style="text-align:center;margin:-4px 0 10px;"></div>
+          <div class="otp-timer">Expires in <strong id="otp-timer">10:00</strong></div>
+
+          <div class="auth-field">
+            <label for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" class="auth-input" placeholder="Your full name" required autocomplete="name">
+          </div>
+          <div class="auth-field">
+            <label for="signup-password">Password</label>
+            <div class="password-input-wrap">
+              <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="signup-confirm">Confirm Password</label>
+            <div class="password-input-wrap">
+              <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <p id="step2-error" class="auth-error hidden"></p>
+          <p id="step2-success" class="auth-success hidden"></p>
+          <button type="submit" class="auth-btn" id="complete-signup-btn"><i class="fas fa-check-circle"></i> Create Account</button>
+        </form>
+
+        <p class="auth-alt" style="margin-top:12px;">
+          <span class="resend-link" id="resend-otp">Resend OTP</span> &middot;
+          <a href="#" id="change-email-link" style="color:#0071e3;cursor:pointer;">Change email</a>
+        </p>
+      </div>
+
+      <p class="auth-alt" id="bottom-link">Already have an account? <a href="login.html">Sign in</a></p>
     </div>
   </main>
 
@@ -107,25 +183,42 @@
       });
     }
 
-    /* ───── Real-time email check ───── */
     let emailAvailable = false;
     let emailCheckTimeout = null;
+    let otpCooldownInterval = null;
+    let otpExpiry = null;
+    let currentEmail = '';
 
     const emailInput = document.getElementById('signup-email');
     const emailStatus = document.getElementById('email-status');
     const emailHelper = document.getElementById('email-helper');
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const step1Dot = document.getElementById('step1-dot');
+    const step1Line = document.getElementById('step1-line');
+    const step2Dot = document.getElementById('step2-dot');
+    const step1Error = document.getElementById('step1-error');
+    const step2Error = document.getElementById('step2-error');
+    const step2Success = document.getElementById('step2-success');
+    const step1Form = document.getElementById('step1-form');
+    const step2Form = document.getElementById('step2-form');
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const completeBtn = document.getElementById('complete-signup-btn');
+    const otpEmailLabel = document.getElementById('otp-email-label');
+    const otpTimer = document.getElementById('otp-timer');
+    const resendLink = document.getElementById('resend-otp');
+    const changeEmailLink = document.getElementById('change-email-link');
+    const bottomLink = document.getElementById('bottom-link');
+    const otpBoxes = document.querySelectorAll('.otp-box');
 
     emailInput.addEventListener('input', () => {
       clearTimeout(emailCheckTimeout);
       const val = emailInput.value.trim();
-
       emailStatus.className = 'auth-input-icon';
       emailHelper.classList.add('hidden');
       emailInput.classList.remove('input-invalid', 'input-valid');
       emailAvailable = false;
-
       if (!val) return;
-
       if (!emailInput.validity.valid) {
         emailStatus.innerHTML = '<i class="fas fa-times-circle icon-invalid"></i>';
         emailHelper.textContent = 'Please enter a valid email address';
@@ -133,9 +226,7 @@
         emailInput.classList.add('input-invalid');
         return;
       }
-
-        emailStatus.innerHTML = '<i class="fas fa-spinner fa-spin icon-loading"></i>';
-
+      emailStatus.innerHTML = '<i class="fas fa-spinner fa-spin icon-loading"></i>';
       emailCheckTimeout = setTimeout(async () => {
         try {
           const result = await checkEmailApi(val);
@@ -149,47 +240,184 @@
             emailHelper.className = 'auth-helper auth-helper-error';
             emailInput.classList.add('input-invalid');
           }
-        } catch {
-          emailStatus.innerHTML = '';
-        }
+        } catch { emailStatus.innerHTML = ''; }
       }, 400);
     });
 
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    const otpStatus = document.getElementById('otp-status');
+    let otpVerifyTimeout = null;
+
+    function resetOtpValidation() {
+      clearTimeout(otpVerifyTimeout);
+      otpBoxes.forEach(b => { b.classList.remove('valid', 'invalid', 'verifying'); });
+      otpStatus.classList.add('hidden');
+    }
+
+    async function verifyOtp() {
+      const otp = Array.from(otpBoxes).map(b => b.value).join('');
+      if (otp.length !== 6) return;
+      otpBoxes.forEach(b => { b.classList.remove('filled'); b.classList.add('verifying'); });
+      otpStatus.className = 'auth-helper';
+      otpStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+      try {
+        const result = await checkSignupOtpApi(currentEmail, otp);
+        if (result.valid) {
+          otpBoxes.forEach(b => { b.classList.remove('verifying', 'invalid', 'filled'); b.classList.add('valid'); });
+          otpStatus.className = 'auth-helper auth-helper-success';
+          otpStatus.innerHTML = '<i class="fas fa-check-circle"></i> Code verified';
+        } else {
+          otpBoxes.forEach(b => { b.classList.remove('verifying', 'valid'); b.classList.add('invalid'); });
+          otpStatus.className = 'auth-helper auth-helper-error';
+          otpStatus.innerHTML = '<i class="fas fa-times-circle"></i> ' + (result.error || 'Invalid code');
+        }
+      } catch {
+        otpBoxes.forEach(b => { b.classList.remove('verifying', 'valid'); b.classList.add('invalid'); });
+        otpStatus.className = 'auth-helper auth-helper-error';
+        otpStatus.innerHTML = '<i class="fas fa-times-circle"></i> Verification failed';
+      }
+    }
+
+    otpBoxes.forEach((box, i) => {
+      box.addEventListener('input', () => {
+        box.value = box.value.replace(/[^0-9]/g, '');
+        if (box.value && i < otpBoxes.length - 1) otpBoxes[i + 1].focus();
+        if (box.value) box.classList.add('filled');
+        else box.classList.remove('filled');
+        resetOtpValidation();
+        otpVerifyTimeout = setTimeout(verifyOtp, 300);
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && i > 0) {
+          otpBoxes[i - 1].focus();
+          otpBoxes[i - 1].value = '';
+          otpBoxes[i - 1].classList.remove('filled');
+          resetOtpValidation();
+        }
+        if (e.key === 'Enter' && box.value) step2Form.dispatchEvent(new Event('submit'));
+      });
+      box.addEventListener('focus', () => box.select());
+    });
+
+    function startOtpTimer(expiresAt) {
+      clearInterval(otpCooldownInterval);
+      otpExpiry = new Date(expiresAt).getTime();
+      otpCooldownInterval = setInterval(() => {
+        const now = Date.now();
+        const diff = Math.max(0, otpExpiry - now);
+        if (diff <= 0) {
+          clearInterval(otpCooldownInterval);
+          otpTimer.closest('.otp-timer').classList.add('expired');
+          otpTimer.innerHTML = 'Expired &mdash; <span class="resend-link" onclick="resendOtp()">resend</span>';
+          return;
+        }
+        const m = String(Math.floor(diff / 60000)).padStart(2, '0');
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        otpTimer.textContent = m + ':' + s;
+      }, 200);
+    }
+
+    function goToStep2(email) {
+      currentEmail = email;
+      otpEmailLabel.textContent = email;
+      step1.classList.add('hidden-step');
+      step2.classList.remove('hidden-step');
+      step1Dot.className = 'step-dot done';
+      step1Line.className = 'step-line done';
+      step2Dot.className = 'step-dot active';
+      bottomLink.classList.add('hidden');
+      document.getElementById('signup-name').focus();
+    }
+
+    function goToStep1() {
+      clearInterval(otpCooldownInterval);
+      step2.classList.add('hidden-step');
+      step1.classList.remove('hidden-step');
+      step1Dot.className = 'step-dot active';
+      step1Line.className = 'step-line';
+      step2Dot.className = 'step-dot';
+      bottomLink.classList.remove('hidden');
+      step2Error.classList.add('hidden');
+      step2Success.classList.add('hidden');
+    }
+
+    changeEmailLink.addEventListener('click', (e) => { e.preventDefault(); goToStep1(); });
+
+    async function resendOtp() {
+      if (resendLink.classList.contains('disabled')) return;
+      resendLink.classList.add('disabled');
+      resendLink.textContent = 'Sending...';
+      try {
+        const result = await sendSignupOtpApi(currentEmail);
+        if (result.success) {
+          document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('filled'); });
+          document.querySelectorAll('.otp-box')[0].focus();
+          startOtpTimer(Date.now() + 600000);
+          step2Error.classList.add('hidden');
+        }
+      } catch (err) {
+        step2Error.textContent = err.message;
+        step2Error.classList.remove('hidden');
+      }
+      resendLink.textContent = 'Resend OTP';
+      setTimeout(() => resendLink.classList.remove('disabled'), 60000);
+    }
+
+    resendLink.addEventListener('click', (e) => { e.preventDefault(); resendOtp(); });
+
+    step1Form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('signup-name').value.trim();
+      step1Error.classList.add('hidden');
       const email = emailInput.value.trim();
+      if (!emailAvailable) {
+        step1Error.textContent = 'Please enter a valid and available email address';
+        step1Error.classList.remove('hidden');
+        return;
+      }
+      sendOtpBtn.classList.add('btn-loading');
+      sendOtpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      try {
+        const result = await sendSignupOtpApi(email);
+        if (result.success) {
+          goToStep2(email);
+          startOtpTimer(Date.now() + 600000);
+          otpBoxes[0].focus();
+        }
+      } catch (err) {
+        step1Error.textContent = err.message;
+        step1Error.classList.remove('hidden');
+      }
+      sendOtpBtn.classList.remove('btn-loading');
+      sendOtpBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
+    });
+
+    step2Form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      step2Error.classList.add('hidden');
+      step2Success.classList.add('hidden');
+      const name = document.getElementById('signup-name').value.trim();
       const password = document.getElementById('signup-password').value;
       const confirm = document.getElementById('signup-confirm').value;
-      const errorEl = document.getElementById('signup-error');
-      const successEl = document.getElementById('signup-success');
-
-      errorEl.classList.add('hidden');
-      successEl.classList.add('hidden');
-
-      if (!emailAvailable) {
-        errorEl.textContent = 'Please use a different email address';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-
-      if (password !== confirm) {
-        errorEl.textContent = 'Passwords do not match';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-
+      const otp = Array.from(otpBoxes).map(b => b.value).join('');
+      if (!name) { step2Error.textContent = 'Please enter your name'; step2Error.classList.remove('hidden'); return; }
+      if (otp.length !== 6) { step2Error.textContent = 'Please enter the full 6-digit code'; step2Error.classList.remove('hidden'); return; }
+      if (password.length < 6) { step2Error.textContent = 'Password must be at least 6 characters'; step2Error.classList.remove('hidden'); return; }
+      if (password !== confirm) { step2Error.textContent = 'Passwords do not match'; step2Error.classList.remove('hidden'); return; }
+      completeBtn.classList.add('btn-loading');
+      completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
       try {
-        const result = await registerApi(name, email, password);
-        successEl.innerHTML = result.verifyUrl
-          ? `Account created! <a href="${result.verifyUrl}" class="text-accent">Click here to verify your email</a> (Development mode)`
-          : result.message;
-        successEl.classList.remove('hidden');
-        document.getElementById('signup-form').querySelector('button').disabled = true;
+        const result = await completeSignupApi(currentEmail, otp, name, password);
+        if (result.success) {
+          step2Success.innerHTML = '<i class="fas fa-check-circle"></i> Account created! Redirecting...';
+          step2Success.classList.remove('hidden');
+          step2Form.querySelectorAll('input, button').forEach(el => el.disabled = true);
+          setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+        }
       } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
+        step2Error.textContent = err.message;
+        step2Error.classList.remove('hidden');
       }
+      completeBtn.classList.remove('btn-loading');
+      completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> Create Account';
     });
 
     initTheme();
