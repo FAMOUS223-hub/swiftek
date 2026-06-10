@@ -26,30 +26,27 @@ function getSmtpConfigs() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) return [];
+  const base = {
+    host,
+    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+  };
   return [
-    {
-      host,
-      port: parseInt(port || '587'),
-      secure: false,
-      auth: { user, pass }
-    },
-    {
-      host,
-      port: 465,
-      secure: true,
-      auth: { user, pass }
-    }
+    { ...base, port: parseInt(port || '587'), secure: false },
+    { ...base, port: 465, secure: true }
   ];
 }
 
 async function sendEmail({ to, subject, html }) {
   const configs = getSmtpConfigs();
   if (!configs.length) throw new Error('SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS)');
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   for (const config of configs) {
     try {
       const t = nodemailer.createTransport(config);
-      await t.verify();
-      const info = await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, html });
+      const info = await t.sendMail({ from, to, subject, html });
       return info;
     } catch (err) {
       console.error('[SMTP] Config failed', config.host + ':' + config.port, err.message);
