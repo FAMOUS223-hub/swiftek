@@ -319,7 +319,7 @@ input, select, textarea { font-family: inherit; }
   overflow-x: auto;
   position: sticky;
   top: 58px;
-  z-index: 999;
+  z-index: 1001;
 }
 .nav-bar::-webkit-scrollbar { display: none; }
 .nav-inner {

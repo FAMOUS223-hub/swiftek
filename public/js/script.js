@@ -1047,4 +1047,67 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initHeroVideo();
   initSidebar();
+  initLiquidNavbar();
+
+  window.addEventListener('scroll', () => {
+    const header = document.querySelector('.header');
+    if (window.scrollY > 20) {
+      header.classList.add('scrolled');
+    } else {
+      header.classList.remove('scrolled');
+    }
+  });
 });
+
+function initLiquidNavbar() {
+  if (window.innerWidth < 768) return;
+
+  const nav = document.querySelector('.nav-inner');
+  const indicator = document.querySelector('.liquid-indicator');
+  const links = document.querySelectorAll('.nav-inner a');
+
+  if (!nav || !indicator || links.length === 0) return;
+
+  function moveIndicator(el) {
+    const rect = el.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    
+    const left = rect.left - navRect.left;
+    const width = rect.width;
+    
+    indicator.style.left = `${left}px`;
+    indicator.style.width = `${width}px`;
+    indicator.style.opacity = '1';
+  }
+
+  // Initial position based on active link
+  const activeLink = document.querySelector('.nav-inner a.active');
+  if (activeLink) {
+    moveIndicator(activeLink);
+  }
+
+  links.forEach(link => {
+    link.addEventListener('mouseenter', () => moveIndicator(link));
+    
+    link.addEventListener('click', () => {
+      links.forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      moveIndicator(link);
+    });
+  });
+
+  nav.addEventListener('mouseleave', () => {
+    const currentActive = document.querySelector('.nav-inner a.active');
+    if (currentActive) {
+      moveIndicator(currentActive);
+    }
+  });
+
+  // Handle window resize to keep indicator aligned
+  window.addEventListener('resize', () => {
+    const currentActive = document.querySelector('.nav-inner a.active');
+    if (currentActive) {
+      moveIndicator(currentActive);
+    }
+  });
+}

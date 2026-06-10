@@ -97,6 +97,9 @@
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
       const errorEl = document.getElementById('login-error');
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
 
       try {
         const result = await userLoginApi(email, password);
@@ -108,6 +111,8 @@
       } catch (err) {
         errorEl.textContent = err.message;
         errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In';
       }
     });
 

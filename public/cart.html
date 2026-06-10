@@ -6,6 +6,7 @@
   <meta name="description" content="SwifTek Accessories — Shopping Cart">
   <title>Shopping Cart — SwifTek Accessories</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/liquid-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://www.apple.com">
 </head>
@@ -65,7 +66,8 @@
   <!-- Navigation -->
   <nav class="nav-bar">
     <ul class="nav-inner container">
-      <li><a href="index.html">← Continue Shopping</a></li>
+      <div class="liquid-indicator"></div>
+      <li><a href="index.html" class="active">← Continue Shopping</a></li>
     </ul>
   </nav>
 
@@ -377,6 +379,17 @@
       </div>
     </div>
   </div>
+
+  <!-- Gooey Filter for Liquid Effect -->
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+      <filter id="gooey-filter">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
 
   <script src="js/data.js"></script>
   <script src="js/api.js"></script>

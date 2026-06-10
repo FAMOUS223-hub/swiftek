@@ -344,6 +344,7 @@
         step1Error.classList.remove('hidden');
         return;
       }
+      sendOtpBtn.disabled = true;
       sendOtpBtn.classList.add('btn-loading');
       sendOtpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
       try {
@@ -356,9 +357,10 @@
       } catch (err) {
         step1Error.textContent = err.message;
         step1Error.classList.remove('hidden');
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.classList.remove('btn-loading');
+        sendOtpBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
       }
-      sendOtpBtn.classList.remove('btn-loading');
-      sendOtpBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
     });
 
     step2Form.addEventListener('submit', async (e) => {
@@ -373,6 +375,7 @@
       if (otp.length !== 6) { step2Error.textContent = 'Please enter the full 6-digit code'; step2Error.classList.remove('hidden'); return; }
       if (password.length < 6) { step2Error.textContent = 'Password must be at least 6 characters'; step2Error.classList.remove('hidden'); return; }
       if (password !== confirm) { step2Error.textContent = 'Passwords do not match'; step2Error.classList.remove('hidden'); return; }
+      completeBtn.disabled = true;
       completeBtn.classList.add('btn-loading');
       completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
       try {
@@ -386,9 +389,10 @@
       } catch (err) {
         step2Error.textContent = err.message;
         step2Error.classList.remove('hidden');
+        completeBtn.disabled = false;
+        completeBtn.classList.remove('btn-loading');
+        completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> Create Account';
       }
-      completeBtn.classList.remove('btn-loading');
-      completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> Create Account';
     });
 
     initTheme();

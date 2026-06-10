@@ -6,6 +6,7 @@
   <title>Admin — SwifTek</title>
   <meta name="description" content="SwifTek Admin Panel — Manage products, orders, and users.">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/liquid-glass.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://www.apple.com">
 </head>
@@ -19,9 +20,10 @@
   <!-- Header -->
   <header class="header">
     <div class="container header-inner">
+      <div class="liquid-indicator"></div>
       <a href="index.html" class="logo">
         <span class="logo-icon">S</span>
-        <span class="logo-text">Swif<span>Tek</span> Accessories</span>
+        <span class="logo-text">Swif<span>Tek</span></span>
       </a>
       <div class="admin-header-spacer"></div>
       <div class="header-actions">
@@ -101,15 +103,21 @@
       </div>
 
       <!-- Controls -->
-      <div class="admin-controls">
-        <button id="admin-prod-btn" class="admin-btn admin-btn-outline" data-section="admin-prod"><i class="fas fa-box"></i> Products</button>
-        <button id="users-btn" class="admin-btn admin-btn-outline" data-section="users"><i class="fas fa-users"></i> Users</button>
-        <button id="user-orders-btn" class="admin-btn admin-btn-outline" data-section="user-orders"><i class="fas fa-user-tag"></i> User Orders</button>
-        <button id="orders-btn" class="admin-btn admin-btn-outline" data-section="orders"><i class="fas fa-truck"></i> Orders</button>
-        <button id="trash-btn" class="admin-btn admin-btn-outline" data-section="trash"><i class="fas fa-trash"></i> Trash</button>
-        <button id="admins-btn" class="admin-btn admin-btn-outline" data-section="admins"><i class="fas fa-user-shield"></i> Admins</button>
-        <button id="settings-btn" class="admin-btn admin-btn-outline" data-section="settings"><i class="fas fa-cog"></i> Settings</button>
-        <input type="text" id="admin-search" class="admin-input admin-input-search" placeholder="Search products...">
+      <div class="admin-top-bar">
+        <div class="admin-controls">
+          <div class="liquid-indicator"></div>
+          <button id="admin-prod-btn" class="admin-btn admin-btn-outline" data-section="admin-prod"><i class="fas fa-box"></i> Products</button>
+          <button id="users-btn" class="admin-btn admin-btn-outline" data-section="users"><i class="fas fa-users"></i> Users</button>
+          <button id="user-orders-btn" class="admin-btn admin-btn-outline" data-section="user-orders"><i class="fas fa-user-tag"></i> User Orders</button>
+          <button id="orders-btn" class="admin-btn admin-btn-outline" data-section="orders"><i class="fas fa-truck"></i> Orders</button>
+          <button id="trash-btn" class="admin-btn admin-btn-outline" data-section="trash"><i class="fas fa-trash"></i> Trash</button>
+          <button id="admins-btn" class="admin-btn admin-btn-outline" data-section="admins"><i class="fas fa-user-shield"></i> Admins</button>
+          <button id="settings-btn" class="admin-btn admin-btn-outline" data-section="settings"><i class="fas fa-cog"></i> Settings</button>
+        </div>
+        <div class="admin-search-wrapper">
+          <input type="text" id="admin-search" class="admin-input admin-input-search" placeholder="Search anything...">
+          <i class="fas fa-search search-icon"></i>
+        </div>
       </div>
 
       <!-- Product List -->
@@ -570,6 +578,17 @@
       </div>
     </div>
   </div>
+
+  <!-- Gooey Filter for Liquid Effect -->
+  <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <defs>
+      <filter id="gooey-filter">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
 
   <!-- Scripts -->
   <script src="js/config.js"></script>

@@ -52,6 +52,8 @@ async function showDashboard() {
   loginScreen.classList.add('hidden');
   dashboard.classList.remove('hidden');
 
+  initLiquidNavbar();
+
   const userData = (() => { try { return JSON.parse(localStorage.getItem('swiftek_user_data') || '{}'); } catch(e) { return {}; } })();
   const adminsBtn = document.getElementById('admins-btn');
   if (adminsBtn) {
@@ -1248,3 +1250,87 @@ function skeletonOrderCards(count) {
 /* ───── Init ───── */
 initTheme();
 checkLogin();
+
+window.addEventListener('scroll', () => {
+  const header = document.querySelector('.header');
+  if (window.scrollY > 20) {
+    header.classList.add('scrolled');
+  } else {
+    header.classList.remove('scrolled');
+  }
+});
+
+function initLiquidNavbar() {
+  if (window.innerWidth < 768) return;
+
+  // 1. Main Header
+  const headerInner = document.querySelector('.header-inner');
+  const headerIndicator = headerInner?.querySelector('.liquid-indicator');
+  const headerLogo = headerInner?.querySelector('.logo');
+  const headerActions = headerInner?.querySelectorAll('.header-action-btn');
+  
+  if (headerInner && headerIndicator) {
+    const moveHeader = (el) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const parentRect = headerInner.getBoundingClientRect();
+      headerIndicator.style.left = `${rect.left - parentRect.left}px`;
+      headerIndicator.style.width = `${rect.width}px`;
+      headerIndicator.style.opacity = '1';
+    };
+    
+    // Default to logo
+    if (headerLogo) moveHeader(headerLogo);
+    
+    headerInner.querySelectorAll('.logo, .header-action-btn').forEach(el => {
+      el.addEventListener('mouseenter', () => moveHeader(el));
+    });
+    
+    headerInner.addEventListener('mouseleave', () => {
+      if (headerLogo) moveHeader(headerLogo);
+    });
+  }
+
+  // 2. Admin Controls (Pills)
+  const controls = document.querySelector('.admin-controls');
+  const controlIndicator = controls?.querySelector('.liquid-indicator');
+  const controlBtns = controls?.querySelectorAll('.admin-btn');
+
+  if (controls && controlIndicator && controlBtns.length > 0) {
+    const moveControl = (el) => {
+      if (!el) {
+        controlIndicator.style.opacity = '0';
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const parentRect = controls.getBoundingClientRect();
+      
+      controlIndicator.style.opacity = '1';
+      controlIndicator.style.left = `${rect.left - parentRect.left}px`;
+      controlIndicator.style.top = `${rect.top - parentRect.top}px`;
+      controlIndicator.style.width = `${rect.width}px`;
+      controlIndicator.style.height = `${rect.height}px`;
+    };
+
+    // Initial position on active button
+    const activeBtn = Array.from(controlBtns).find(btn => btn.classList.contains('active'));
+    if (activeBtn) moveControl(activeBtn);
+
+    controlBtns.forEach(btn => {
+      btn.addEventListener('mouseenter', () => moveControl(btn));
+      
+      btn.addEventListener('click', () => {
+        // Short delay to allow 'active' class to be swapped by other logic
+        setTimeout(() => {
+          const newActive = Array.from(controlBtns).find(b => b.classList.contains('active'));
+          moveControl(newActive);
+        }, 10);
+      });
+    });
+
+    controls.addEventListener('mouseleave', () => {
+      const currentActive = Array.from(controlBtns).find(btn => btn.classList.contains('active'));
+      moveControl(currentActive);
+    });
+  }
+}
