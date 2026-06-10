@@ -13,33 +13,43 @@ const signupOtpCss = fs.readFileSync(
   'utf8'
 );
 
-dns.resolve4(process.env.SMTP_HOST, (err, addresses) => {
-  if (err) console.error('[SMTP DNS] Failed to resolve', process.env.SMTP_HOST, err.message);
-  else console.log('[SMTP DNS]', process.env.SMTP_HOST, '->', addresses);
-});
+if (process.env.SMTP_HOST) {
+  dns.resolve4(process.env.SMTP_HOST, (err, addresses) => {
+    if (err) console.error('[SMTP DNS] Failed to resolve', process.env.SMTP_HOST, err.message);
+    else console.log('[SMTP DNS]', process.env.SMTP_HOST, '->', addresses);
+  });
+}
 
-const smtpConfigs = [
-  {
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-  },
-  {
-    host: process.env.SMTP_HOST,
-    port: 465,
-    secure: true,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-  }
-];
+function getSmtpConfigs() {
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return [];
+  return [
+    {
+      host,
+      port: parseInt(port || '587'),
+      secure: false,
+      auth: { user, pass }
+    },
+    {
+      host,
+      port: 465,
+      secure: true,
+      auth: { user, pass }
+    }
+  ];
+}
 
 async function sendEmail({ to, subject, html }) {
-  const lastErr = null;
-  for (const config of smtpConfigs) {
+  const configs = getSmtpConfigs();
+  if (!configs.length) throw new Error('SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS)');
+  for (const config of configs) {
     try {
       const t = nodemailer.createTransport(config);
       await t.verify();
-      const info = await t.sendMail({ from: process.env.SMTP_FROM, to, subject, html });
+      const info = await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, html });
       return info;
     } catch (err) {
       console.error('[SMTP] Config failed', config.host + ':' + config.port, err.message);
