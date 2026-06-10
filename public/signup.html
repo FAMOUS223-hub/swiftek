@@ -6,37 +6,8 @@
   <title>Sign Up — SwifTek Accessories</title>
   <meta name="description" content="Create a SwifTek account for faster checkout and order tracking.">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/signup.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
-    .step-indicator { display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px; }
-    .step-dot { width:10px;height:10px;border-radius:50%;background:#e8e8ed;transition:all 0.3s; }
-    .step-dot.active { background:#0071e3;width:28px;border-radius:5px; }
-    .step-dot.done { background:#30d158; }
-    .step-line { width:32px;height:2px;background:#e8e8ed;border-radius:1px; }
-    .step-line.done { background:#30d158; }
-    .otp-input-wrap { display:flex;gap:10px;justify-content:center;margin-bottom:8px; }
-    .otp-input-wrap input { width:48px;height:56px;text-align:center;font-size:24px;font-weight:600;border:2px solid #e8e8ed;border-radius:12px;outline:none;transition:border-color 0.2s;background:#f9f9fb;color:#1d1d1f; }
-    .otp-input-wrap input:focus { border-color:#0071e3;background:#fff;box-shadow:0 0 0 3px rgba(0,113,227,0.12); }
-    .otp-input-wrap input.filled { border-color:#30d158;background:#f0faf0; }
-    .otp-input-wrap input.valid { border-color:#30d158;background:#e8f8ed; }
-    .otp-input-wrap input.invalid { border-color:#ff453a;background:#fff2f2;animation:shake 0.4s; }
-    .otp-input-wrap input.verifying { border-color:#0071e3;background:#e8f4fd; }
-    .otp-timer { background:#f5f5f7;border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:14px;color:#6e6e73;border:1px solid #e8e8ed; }
-    .otp-timer strong { color:#1d1d1f;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.5px; }
-    .otp-timer.expired { border-color:#ffd5d2;background:#fff5f5; }
-    .otp-timer.expired strong { color:#ff453a; }
-    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
-    .auth-helper-success { color:#30d158; }
-    .auth-step { transition:opacity 0.3s,transform 0.3s; }
-    .auth-step.hidden-step { display:none; }
-    .otp-email-display { text-align:center;margin-bottom:16px;font-size:14px;color:#6e6e73; }
-    .otp-email-display strong { color:#1d1d1f; }
-    .resend-link { color:#0071e3;cursor:pointer;text-decoration:none;font-weight:500; }
-    .resend-link:hover { text-decoration:underline; }
-    .resend-link.disabled { color:#aeaeb2;cursor:not-allowed;text-decoration:none; }
-    .btn-loading { pointer-events:none;opacity:0.7; }
-    .btn-loading i { margin-right:6px; }
-  </style>
 </head>
 <body class="auth-video-page">
 

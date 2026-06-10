@@ -7,6 +7,11 @@ const fs = require('fs');
 
 const nodemailer = require('nodemailer');
 
+const signupOtpCss = fs.readFileSync(
+  path.join(__dirname, 'public', 'css', 'email-signup-otp.css'),
+  'utf8'
+);
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
@@ -259,82 +264,91 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
     const expiryDate = expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const isToday = expiresAt.toDateString() === new Date().toDateString();
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="color-scheme" content="light">
-        <style>
-          @media screen and (max-width:480px) {
-            .otp-digits { font-size:20px !important; letter-spacing:3px !important; padding:16px 12px !important; }
-          }
-        </style>
-      </head>
-      <body style="margin:0;padding:0;background-color:#f2f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f2f5;">
-          <tr>
-            <td align="center" style="padding:48px 16px;">
-              <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
-
-                <!-- Letterhead -->
-                <tr>
-                  <td style="background:linear-gradient(135deg,#0071e3 0%,#003a70 50%,#001d3d 100%);border-radius:20px 20px 0 0;padding:40px 32px 28px;text-align:center;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
-                      <tr>
-                        <td align="center" style="width:64px;height:64px;background:rgba(255,255,255,0.12);border-radius:18px;">
-                          <span style="font-size:32px;font-weight:800;color:#ffffff;line-height:64px;letter-spacing:-1px;">S</span>
-                        </td>
-                      </tr>
-                    </table>
-                    <h1 style="font-size:13px;font-weight:700;color:#ffffff;margin:0 0 2px;letter-spacing:3px;text-transform:uppercase;">SwifTek</h1>
-                    <p style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.45);margin:0;letter-spacing:5px;text-transform:uppercase;">Accessories</p>
-                    <div style="width:48px;height:3px;background:linear-gradient(90deg,#0071e3,#00a8ff);border-radius:2px;margin:16px auto 0;"></div>
-                  </td>
-                </tr>
-
-                <!-- Body -->
-                <tr>
-                  <td style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 20px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.04);">
-
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
-                      <tr>
-                        <td align="center" valign="middle" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#e8f4fd,#d0eafc);font-size:32px;line-height:32px;">✉️</td>
-                      </tr>
-                    </table>
-
-                    <h1 style="font-size:26px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.5px;">Verify your email</h1>
-                    <p style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.6;">Hi there,<br>use the code below to verify your <strong style="color:#1d1d1f;">SwifTek Accessories</strong> account.</p>
-
-                    <!-- OTP Box -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;background:#f5f5f7;border-radius:16px;width:100%;">
-                      <tr>
-                        <td align="center" class="otp-digits" style="padding:20px 16px;letter-spacing:4px;font-size:16px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums;white-space:nowrap;">${otp}</td>
-                      </tr>
-                    </table>
-
-                    <p style="font-size:14px;color:#8e8e93;margin:0 0 24px;line-height:1.6;">Code expires <strong style="color:#1d1d1f;">${isToday ? 'today at' : expiryDate} ${expiryTime}</strong> &middot; <strong style="color:#1d1d1f;">10:00</strong> minutes remaining. If you didn't request this, you can safely ignore this email.</p>
-
-                    <!-- Divider -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
-                      <tr>
-                        <td style="border-bottom:1px solid #e8e8ed;line-height:1px;height:1px;">&nbsp;</td>
-                      </tr>
-                    </table>
-
-                    <p style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>
-                    <p style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>
-
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
+    const emailHtml = [
+      '<!DOCTYPE html>',
+      '<html>',
+      '<head>',
+      '  <meta charset="utf-8">',
+      '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      '  <meta name="color-scheme" content="light">',
+      '  <style>' + signupOtpCss + '</style>',
+      '</head>',
+      '<body style="margin:0;padding:0;background-color:#f2f2f5;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">',
+      '  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f2f5;">',
+      '    <tr>',
+      '      <td align="center" style="padding:48px 16px;">',
+      '        <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">',
+      '',
+      '          <!-- Letterhead -->',
+      '          <tr>',
+      '            <td class="email-header"',
+      '                style="background:linear-gradient(135deg,#0071e3 0%,#003a70 50%,#001d3d 100%);border-radius:20px 20px 0 0;padding:40px 32px 28px;text-align:center;">',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">',
+      '                <tr>',
+      '                  <td align="center" class="email-logo-cell"',
+      '                      style="width:64px;height:64px;background:rgba(255,255,255,0.12);border-radius:18px;font-size:32px;font-weight:800;color:#ffffff;line-height:64px;letter-spacing:-1px;">S</td>',
+      '                </tr>',
+      '              </table>',
+      '              <h1 class="email-brand-name"',
+      '                  style="font-size:13px;font-weight:700;color:#ffffff;margin:0 0 2px;letter-spacing:3px;text-transform:uppercase;">SwifTek</h1>',
+      '              <p class="email-brand-sub"',
+      '                 style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.45);margin:0;letter-spacing:5px;text-transform:uppercase;">Accessories</p>',
+      '              <div class="email-divider-accent"',
+      '                   style="width:48px;height:3px;background:linear-gradient(90deg,#0071e3,#00a8ff);border-radius:2px;margin:16px auto 0;"></div>',
+      '            </td>',
+      '          </tr>',
+      '',
+      '          <!-- Body -->',
+      '          <tr>',
+      '            <td class="email-body"',
+      '                style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 20px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.04);">',
+      '',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">',
+      '                <tr>',
+      '                  <td align="center" valign="middle" class="email-icon-circle"',
+      '                      style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#e8f4fd,#d0eafc);font-size:32px;line-height:72px;">✉️</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <h1 class="email-heading"',
+      '                  style="font-size:26px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.5px;">Verify your email</h1>',
+      '              <p class="email-body-text"',
+      '                 style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.6;">Hi there,<br>use the code below to verify your <strong style="color:#1d1d1f;">SwifTek Accessories</strong> account.</p>',
+      '',
+      '              <!-- OTP Box -->',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" class="email-otp-box"',
+      '                     style="margin:0 auto 28px;background:#f5f5f7;border-radius:16px;width:100%;">',
+      '                <tr>',
+      '                  <td align="center" class="email-otp-digits"',
+      '                      style="padding:20px 16px;letter-spacing:4px;font-size:16px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums;white-space:nowrap;">' + otp + '</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <p class="email-expiry"',
+      '                 style="font-size:14px;color:#8e8e93;margin:0 0 24px;line-height:1.6;">Code expires <strong style="color:#1d1d1f;">' + (isToday ? 'today at' : expiryDate) + ' ' + expiryTime + '</strong> &middot; <strong style="color:#1d1d1f;">10:00</strong> minutes remaining. If you didn\'t request this, you can safely ignore this email.</p>',
+      '',
+      '              <!-- Divider -->',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">',
+      '                <tr>',
+      '                  <td class="email-hr"',
+      '                      style="border-bottom:1px solid #e8e8ed;line-height:1px;height:1px;">&nbsp;</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <p class="email-footer-text"',
+      '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
+      '              <p class="email-footer-link"',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '',
+      '            </td>',
+      '          </tr>',
+      '        </table>',
+      '      </td>',
+      '    </tr>',
+      '  </table>',
+      '</body>',
+      '</html>'
+    ].join('\n');
 
     await sendEmail({
       to: normalized,
