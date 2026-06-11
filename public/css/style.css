@@ -3025,6 +3025,73 @@ select.admin-input { cursor: pointer; }
 .auth-page-video .auth-card .input-invalid:focus { box-shadow: 0 0 0 3px rgba(255,69,58,0.3) !important; }
 .auth-page-video .auth-card .auth-helper-error { color: #ff453a; }
 
+/* Dark auth page — OTP inputs */
+.auth-page-video .auth-card .otp-input-wrap input {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.auth-page-video .auth-card .otp-input-wrap input:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0,113,227,0.3);
+  background: rgba(255,255,255,0.12);
+}
+.auth-page-video .auth-card .otp-input-wrap input.filled {
+  border-color: #30d158;
+  background: rgba(48,209,88,0.15);
+}
+.auth-page-video .auth-card .otp-input-wrap input.valid {
+  border-color: #30d158;
+  background: rgba(48,209,88,0.2);
+}
+.auth-page-video .auth-card .otp-input-wrap input.invalid {
+  border-color: #ff453a;
+  background: rgba(255,69,58,0.15);
+}
+.auth-page-video .auth-card .otp-input-wrap input.verifying {
+  border-color: #0071e3;
+  background: rgba(0,113,227,0.15);
+}
+.auth-page-video .auth-card .otp-timer {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.55);
+}
+.auth-page-video .auth-card .otp-timer strong {
+  color: #fff;
+}
+.auth-page-video .auth-card .otp-timer.expired {
+  border-color: rgba(255,69,58,0.3);
+  background: rgba(255,69,58,0.1);
+}
+.auth-page-video .auth-card .otp-timer.expired strong {
+  color: #ff453a;
+}
+.auth-page-video .auth-card .otp-email-display {
+  color: rgba(255,255,255,0.55);
+}
+.auth-page-video .auth-card .otp-email-display strong {
+  color: #fff;
+}
+.auth-page-video .auth-card .resend-link {
+  color: #0071e3;
+}
+.auth-page-video .auth-card .step-dot {
+  background: rgba(255,255,255,0.15);
+}
+.auth-page-video .auth-card .step-dot.active {
+  background: #0071e3;
+}
+.auth-page-video .auth-card .step-dot.done {
+  background: #30d158;
+}
+.auth-page-video .auth-card .step-line {
+  background: rgba(255,255,255,0.1);
+}
+.auth-page-video .auth-card .step-line.done {
+  background: #30d158;
+}
+
 /* User Dropdown */
 .user-menu-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);

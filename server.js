@@ -13,6 +13,11 @@ const signupOtpCss = fs.readFileSync(
   'utf8'
 );
 
+const forgotPasswordCss = fs.readFileSync(
+  path.join(__dirname, 'public', 'css', 'email-forgot-password.css'),
+  'utf8'
+);
+
 const dnsOverGoogle = new Resolver();
 dnsOverGoogle.setServers(['8.8.8.8', '1.1.1.1']);
 
@@ -344,6 +349,8 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
       sentAt: new Date()
     });
 
+    res.json({ success: true, message: 'OTP sent to your email.' });
+
     const expiryTime = expiresAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     const expiryDate = expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const isToday = expiresAt.toDateString() === new Date().toDateString();
@@ -434,14 +441,15 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
       '</html>'
     ].join('\n');
 
-    await sendEmail({
+    sendEmail({
       to: normalized,
       subject: 'Verify your email — SwifTek Accessories',
       html: emailHtml
+    }).then(() => {
+      console.log('[SIGNUP OTP] Sent to', normalized);
+    }).catch(err => {
+      console.error('[SIGNUP OTP FAILED]', err.message);
     });
-
-    console.log('[SIGNUP OTP] Sent to', normalized);
-    res.json({ success: true, message: 'OTP sent to your email.' });
   } catch (err) {
     console.error('[SEND-SIGNUP-OTP ERROR]', err);
     res.status(500).json({ error: 'Failed to send OTP: ' + err.message });
@@ -661,90 +669,114 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.resetOtp = otp;
-    user.resetOtpExpires = new Date(Date.now() + 1800000);
+    user.resetOtpExpires = new Date(Date.now() + 600000);
     user.resetOtpSentAt = new Date();
+    user.resetOtpAttempts = 0;
     await user.save();
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;">
-          <tr>
-            <td align="center" style="padding:40px 16px;">
-                <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
+    const expiryTime = user.resetOtpExpires.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const expiryDate = user.resetOtpExpires.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isToday = user.resetOtpExpires.toDateString() === new Date().toDateString();
 
-                  <!-- Letterhead -->
-                  <tr>
-                    <td style="background:linear-gradient(135deg,#0071e3 0%,#002b5e 100%);border-radius:16px 16px 0 0;padding:36px 32px 28px;text-align:center;">
-                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
-                        <tr>
-                          <td align="center" style="width:56px;height:56px;font-size:28px;font-weight:800;color:#ffffff;line-height:56px;background:rgba(255,255,255,0.15);border-radius:16px;">S</td>
-                          <td style="width:8px;"></td>
-                          <td align="left" valign="middle">
-                            <table role="presentation" cellpadding="0" cellspacing="0">
-                              <tr><td style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:2.5px;text-transform:uppercase;">SwifTek</td></tr>
-                              <tr><td style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);letter-spacing:4px;text-transform:uppercase;">Accessories</td></tr>
-                            </table>
-                          </td>
-                        </tr>
-                      </table>
-                      <div style="width:40px;height:2px;background:rgba(255,255,255,0.2);border-radius:1px;margin:0 auto;"></div>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <td style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 16px 16px;">
-
-                    <!-- Heading -->
-                    <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.3px;">Reset your password</h1>
-                    <p style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.5;">Hi ${user.name},<br>enter the code below to reset your <strong>SwifTek Accessories</strong> account password.</p>
-
-                    <!-- OTP Box -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;background:#f5f5f7;border-radius:14px;width:100%;">
-                      <tr>
-                        <td align="center" style="padding:24px 16px;letter-spacing:10px;font-size:38px;font-weight:700;color:#1d1d1f;">${otp.split('').join(' ')}</td>
-                      </tr>
-                    </table>
-
-                    <!-- Expiry -->
-                    <p style="font-size:14px;color:#8e8e93;margin:0 0 28px;line-height:1.5;">This code expires in <strong style="color:#1d1d1f;">30 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>
-
-                    <!-- Divider -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
-                      <tr>
-                        <td style="border-bottom:1px solid #e8e8ed;margin:0;padding:0;line-height:1px;height:1px;">&nbsp;</td>
-                      </tr>
-                    </table>
-
-                    <!-- Footer -->
-                    <p style="font-size:13px;color:#8e8e93;margin:24px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span style="color:#aeaeb2;">Built by Famous Tech</span></p>
-
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    await sendEmail({
-      to: user.email,
-      subject: 'Reset your password — SwifTek Accessories',
-      html: emailHtml
-    });
-
-    console.log('[EMAIL] OTP sent to', user.email);
+    const emailHtml = [
+      '<!DOCTYPE html>',
+      '<html>',
+      '<head>',
+      '  <meta charset="utf-8">',
+      '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      '  <meta name="color-scheme" content="light">',
+      '  <style>' + forgotPasswordCss + '</style>',
+      '</head>',
+      '<body style="margin:0;padding:0;background-color:#f2f2f5;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">',
+      '  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f2f5;">',
+      '    <tr>',
+      '      <td align="center" style="padding:48px 16px;">',
+      '        <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">',
+      '',
+      '          <!-- Letterhead -->',
+      '          <tr>',
+      '            <td class="email-header"',
+      '                style="background:linear-gradient(135deg,#0071e3 0%,#003a70 50%,#001d3d 100%);border-radius:20px 20px 0 0;padding:40px 32px 28px;text-align:center;">',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">',
+      '                <tr>',
+      '                  <td align="center" class="email-logo-cell"',
+      '                      style="width:64px;height:64px;background:rgba(255,255,255,0.12);border-radius:18px;font-size:32px;font-weight:800;color:#ffffff;line-height:64px;letter-spacing:-1px;">S</td>',
+      '                </tr>',
+      '              </table>',
+      '              <h1 class="email-brand-name"',
+      '                  style="font-size:13px;font-weight:700;color:#ffffff;margin:0 0 2px;letter-spacing:3px;text-transform:uppercase;">SwifTek</h1>',
+      '              <p class="email-brand-sub"',
+      '                 style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.45);margin:0;letter-spacing:5px;text-transform:uppercase;">Accessories</p>',
+      '              <div class="email-divider-accent"',
+      '                   style="width:48px;height:3px;background:linear-gradient(90deg,#0071e3,#00a8ff);border-radius:2px;margin:16px auto 0;"></div>',
+      '            </td>',
+      '          </tr>',
+      '',
+      '          <!-- Body -->',
+      '          <tr>',
+      '            <td class="email-body"',
+      '                style="background:#ffffff;padding:40px 32px 32px;text-align:center;border-radius:0 0 20px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.04);">',
+      '',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">',
+      '                <tr>',
+      '                  <td align="center" valign="middle" class="email-icon-circle"',
+      '                      style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#e8f4fd,#d0eafc);font-size:32px;line-height:72px;">🔐</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <h1 class="email-heading"',
+      '                  style="font-size:26px;font-weight:700;color:#1d1d1f;margin:0 0 8px;letter-spacing:-0.5px;">Reset your password</h1>',
+      '              <p class="email-body-text"',
+      '                 style="font-size:16px;color:#6e6e73;margin:0 0 32px;line-height:1.6;">Hi ' + user.name + ',<br>use the code below to reset your <strong style="color:#1d1d1f;">SwifTek Accessories</strong> account password.</p>',
+      '',
+      '              <!-- OTP Box -->',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" class="email-otp-box"',
+      '                     style="margin:0 auto 28px;background:#f5f5f7;border-radius:16px;width:100%;">',
+      '                <tr>',
+      '                  <td align="center" class="email-otp-digits"',
+      '                      style="padding:24px 16px;letter-spacing:8px;font-size:38px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums;white-space:nowrap;">' + otp.split('').join(' ') + '</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <p class="email-expiry"',
+      '                 style="font-size:14px;color:#8e8e93;margin:0 0 24px;line-height:1.6;">Code expires <strong style="color:#1d1d1f;">' + (isToday ? 'today at' : expiryDate) + ' ' + expiryTime + '</strong> &middot; <strong style="color:#1d1d1f;">10:00</strong> minutes remaining. If you didn\'t request this, you can safely ignore this email.</p>',
+      '',
+      '              <!-- Divider -->',
+      '              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">',
+      '                <tr>',
+      '                  <td class="email-hr"',
+      '                      style="border-bottom:1px solid #e8e8ed;line-height:1px;height:1px;">&nbsp;</td>',
+      '                </tr>',
+      '              </table>',
+      '',
+      '              <p class="email-footer-text"',
+      '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
+      '              <p class="email-footer-link"',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '',
+      '            </td>',
+      '          </tr>',
+      '        </table>',
+      '      </td>',
+      '    </tr>',
+      '  </table>',
+      '</body>',
+      '</html>'
+    ].join('\n');
 
     res.json({
       success: true,
       message: 'If that email exists, an OTP has been sent.'
+    });
+
+    sendEmail({
+      to: user.email,
+      subject: 'Reset your password — SwifTek Accessories',
+      html: emailHtml
+    }).then(() => {
+      console.log('[EMAIL] Password reset OTP sent to', user.email);
+    }).catch(err => {
+      console.error('[EMAIL] Password reset OTP failed:', err.message);
     });
   } catch (err) {
     console.error('[FORGOT-PASSWORD ERROR]', err.message);
@@ -766,14 +798,25 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
       return res.status(400).json({ error: 'No OTP has been requested. Please request a new one.' });
     }
 
+    if (user.resetOtpAttempts >= 5) {
+      user.resetOtp = null;
+      user.resetOtpExpires = null;
+      user.resetOtpAttempts = 0;
+      await user.save();
+      return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
+    }
+
     if (new Date() > user.resetOtpExpires) {
       user.resetOtp = null;
       user.resetOtpExpires = null;
+      user.resetOtpAttempts = 0;
       await user.save();
       return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
     }
 
     if (user.resetOtp !== otp) {
+      user.resetOtpAttempts += 1;
+      await user.save();
       return res.status(400).json({ error: 'Invalid OTP. Please check and try again.' });
     }
 
@@ -782,6 +825,7 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 300000);
     user.resetOtp = null;
     user.resetOtpExpires = null;
+    user.resetOtpAttempts = 0;
     await user.save();
 
     res.json({ success: true, resetToken });

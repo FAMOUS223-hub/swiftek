@@ -7,7 +7,8 @@
   <meta name="description" content="Create a SwifTek account for faster checkout and order tracking.">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/signup.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 </head>
 <body class="auth-video-page">
 
@@ -34,46 +35,101 @@
       <div class="auth-logo">
         <span class="logo-icon">S</span>
       </div>
-      <h1>Create Account</h1>
-      <p class="auth-desc">Join SwifTek Accessories today</p>
 
-      <form id="signup-form" novalidate>
-        <div class="auth-field auth-field-email">
-          <label for="signup-email">Email</label>
-          <div class="auth-input-wrap">
-            <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
-            <span id="email-status" class="auth-input-icon"></span>
+      <div class="step-indicator" id="step-indicator">
+        <span class="step-dot active" id="dot-1"></span>
+        <span class="step-line" id="line-1"></span>
+        <span class="step-dot" id="dot-2"></span>
+        <span class="step-line" id="line-2"></span>
+        <span class="step-dot" id="dot-3"></span>
+      </div>
+
+      <!-- Step 1: Email -->
+      <div id="step-email" class="auth-step">
+        <h1>Create Account</h1>
+        <p class="auth-desc">Enter your email to get started</p>
+
+        <form id="email-form" novalidate>
+          <div class="auth-field auth-field-email">
+            <label for="signup-email">Email</label>
+            <div class="auth-input-wrap">
+              <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
+              <span id="email-status" class="auth-input-icon"></span>
+            </div>
+            <p id="email-helper" class="auth-helper hidden"></p>
           </div>
-          <p id="email-helper" class="auth-helper hidden"></p>
+
+          <p id="step1-error" class="auth-error hidden"></p>
+          <p id="step1-success" class="auth-success hidden"></p>
+          <button type="submit" class="auth-btn" id="step1-btn"><i class="fas fa-paper-plane"></i> Send OTP</button>
+        </form>
+      </div>
+
+      <!-- Step 2: OTP -->
+      <div id="step-otp" class="auth-step hidden-step">
+        <h1>Verify Email</h1>
+        <p class="auth-desc">A 6-digit code was sent to</p>
+        <p class="otp-email-display" id="otp-email-display"><strong id="display-email"></strong></p>
+
+        <div class="otp-timer" id="otp-timer">
+          <i class="far fa-clock"></i> Code expires in <strong id="otp-countdown">10:00</strong>
         </div>
 
-        <div class="auth-field">
-          <label for="signup-name">Full Name</label>
-          <input type="text" id="signup-name" class="auth-input" placeholder="Your full name" required autocomplete="name">
-        </div>
-
-        <div class="auth-field">
-          <label for="signup-password">Password</label>
-          <div class="password-input-wrap">
-            <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+        <form id="otp-form" novalidate>
+          <div class="otp-input-wrap" id="otp-boxes">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="0" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="1" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="2" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="3" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="4" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-box" data-index="5" autocomplete="off">
           </div>
-        </div>
 
-        <div class="auth-field">
-          <label for="signup-confirm">Confirm Password</label>
-          <div class="password-input-wrap">
-            <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+          <p id="step2-error" class="auth-error hidden"></p>
+          <p id="step2-success" class="auth-success hidden"></p>
+          <button type="submit" class="auth-btn" id="step2-btn" disabled><i class="fas fa-check"></i> Verify Email</button>
+        </form>
+
+        <p class="auth-alt mt-12">
+          Didn't receive it?
+          <a href="#" id="resend-otp-link" class="resend-link">Resend OTP</a>
+        </p>
+      </div>
+
+      <!-- Step 3: Complete Profile -->
+      <div id="step-profile" class="auth-step hidden-step">
+        <h1>Complete Profile</h1>
+        <p class="auth-desc">Set your name and password</p>
+
+        <form id="profile-form" novalidate>
+          <div class="auth-field">
+            <label for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" class="auth-input" placeholder="Your full name" required autocomplete="name">
           </div>
-        </div>
 
-        <p id="signup-error" class="auth-error hidden"></p>
-        <p id="signup-success" class="auth-success hidden"></p>
-        <button type="submit" class="auth-btn" id="signup-btn"><i class="fas fa-user-plus"></i> Create Account</button>
-      </form>
+          <div class="auth-field">
+            <label for="signup-password">Password</label>
+            <div class="password-input-wrap">
+              <input type="password" id="signup-password" class="auth-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
 
-      <p class="auth-alt" style="margin-top:16px;">Already have an account? <a href="login.html">Sign in</a></p>
+          <div class="auth-field">
+            <label for="signup-confirm">Confirm Password</label>
+            <div class="password-input-wrap">
+              <input type="password" id="signup-confirm" class="auth-input" placeholder="Repeat your password" required minlength="6" autocomplete="new-password">
+              <button type="button" class="password-toggle" onclick="togglePassword(this)" tabindex="-1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
+            </div>
+          </div>
+
+          <p id="step3-error" class="auth-error hidden"></p>
+          <p id="step3-success" class="auth-success hidden"></p>
+          <button type="submit" class="auth-btn" id="step3-btn"><i class="fas fa-user-plus"></i> Create Account</button>
+        </form>
+      </div>
+
+      <p class="auth-alt" style="margin-top:16px;" id="login-link">Already have an account? <a href="login.html">Sign in</a></p>
     </div>
   </main>
 
@@ -92,6 +148,265 @@
 
   <script src="js/api.js"></script>
   <script>
+    /* ─── State ─── */
+    let signupEmail = '';
+    let otpExpiresAt = null;
+    let otpTimerInterval = null;
+    let otpCooldownTimer = null;
+
+    const $ = id => document.getElementById(id);
+
+    /* ─── Step navigation ─── */
+    function showStep(step) {
+      const stepIds = ['step-email', 'step-otp', 'step-profile'];
+      stepIds.forEach((id, i) => {
+        const s = i + 1;
+        $(id).classList.toggle('hidden-step', s !== step);
+        $(`dot-${s}`).className = s < step ? 'step-dot done' : s === step ? 'step-dot active' : 'step-dot';
+      });
+      [1,2].forEach(s => $(`line-${s}`).className = s < step ? 'step-line done' : 'step-line');
+    }
+
+    /* ─── Step 1: Send OTP ─── */
+    $('email-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = $('signup-email').value.trim();
+      const errEl = $('step1-error');
+      const sucEl = $('step1-success');
+      const btn = $('step1-btn');
+      errEl.classList.add('hidden');
+      sucEl.classList.add('hidden');
+
+      if (!email) { errEl.textContent = 'Please enter your email'; errEl.classList.remove('hidden'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+      try {
+        const result = await checkEmailApi(email);
+        if (!result.available) {
+          errEl.textContent = 'An account with this email already exists';
+          errEl.classList.remove('hidden');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
+          return;
+        }
+
+        await sendSignupOtpApi(email);
+        signupEmail = email;
+        $('display-email').textContent = email;
+        otpExpiresAt = Date.now() + 600000;
+        showStep(2);
+        startOtpTimer();
+        $('otp-boxes').querySelector('input').focus();
+      } catch (err) {
+        const match = err.message.match(/^Please wait (\d+)s/);
+        if (match) {
+          startCooldown(parseInt(match[1]), btn, errEl);
+        } else {
+          errEl.textContent = err.message;
+          errEl.classList.remove('hidden');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send OTP';
+        }
+      }
+    });
+
+    /* ─── OTP Timer ─── */
+    function startOtpTimer() {
+      clearInterval(otpTimerInterval);
+      const timerEl = $('otp-timer');
+      const cdEl = $('otp-countdown');
+      timerEl.classList.remove('expired');
+      otpTimerInterval = setInterval(() => {
+        const remaining = Math.max(0, otpExpiresAt - Date.now());
+        const mins = String(Math.floor(remaining / 60000)).padStart(2, '0');
+        const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+        cdEl.textContent = `${mins}:${secs}`;
+        if (remaining <= 0) {
+          clearInterval(otpTimerInterval);
+          otpTimerInterval = null;
+          timerEl.classList.add('expired');
+          cdEl.textContent = 'Expired';
+          $('step2-error').textContent = 'OTP has expired. Please request a new one.';
+          $('step2-error').classList.remove('hidden');
+          $('step2-btn').disabled = true;
+        }
+      }, 200);
+    }
+
+    /* ─── OTP input handling ─── */
+    const otpBoxes = document.querySelectorAll('.otp-box');
+    otpBoxes.forEach((box, idx) => {
+      box.addEventListener('input', () => {
+        box.value = box.value.replace(/[^0-9]/g, '');
+        box.classList.toggle('filled', box.value !== '');
+        if (box.value && idx < 5) otpBoxes[idx + 1].focus();
+        updateOtpSubmit();
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && idx > 0) {
+          otpBoxes[idx - 1].focus();
+          otpBoxes[idx - 1].value = '';
+          otpBoxes[idx - 1].classList.remove('filled');
+          updateOtpSubmit();
+        }
+      });
+      box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const data = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+        data.split('').slice(0, 6).forEach((ch, i) => {
+          if (otpBoxes[i]) {
+            otpBoxes[i].value = ch;
+            otpBoxes[i].classList.toggle('filled', ch !== '');
+          }
+        });
+        const nextIdx = Math.min(data.length, 5);
+        otpBoxes[nextIdx]?.focus();
+        updateOtpSubmit();
+      });
+    });
+
+    function getOtpValue() {
+      return Array.from(otpBoxes).map(b => b.value).join('');
+    }
+
+    function updateOtpSubmit() {
+      $('step2-btn').disabled = getOtpValue().length !== 6;
+    }
+
+    function setOtpBoxesState(className) {
+      otpBoxes.forEach(b => { b.classList.remove('valid', 'invalid', 'verifying'); if (className) b.classList.add(className); });
+    }
+
+    /* ─── Step 2: Verify OTP ─── */
+    $('otp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otp = getOtpValue();
+      const errEl = $('step2-error');
+      const sucEl = $('step2-success');
+      const btn = $('step2-btn');
+      errEl.classList.add('hidden');
+      sucEl.classList.add('hidden');
+
+      if (otp.length !== 6) { errEl.textContent = 'Please enter the full 6-digit code'; errEl.classList.remove('hidden'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+      setOtpBoxesState('verifying');
+
+      try {
+        const result = await checkSignupOtpApi(signupEmail, otp);
+        if (result.valid) {
+          setOtpBoxesState('valid');
+          clearInterval(otpTimerInterval);
+          otpTimerInterval = null;
+          showStep(3);
+          $('signup-name').focus();
+        } else {
+          throw new Error(result.error || 'Invalid OTP');
+        }
+      } catch (err) {
+        setOtpBoxesState('invalid');
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Verify Email';
+        setTimeout(() => setOtpBoxesState(null), 600);
+        otpBoxes.forEach(b => b.value = '');
+        otpBoxes[0].focus();
+        updateOtpSubmit();
+      }
+    });
+
+    /* ─── Resend OTP ─── */
+    $('resend-otp-link').addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (otpCooldownTimer) return;
+      const link = e.target;
+      const errEl = $('step2-error');
+      errEl.classList.add('hidden');
+      link.textContent = 'Sending...';
+
+      try {
+        await sendSignupOtpApi(signupEmail);
+        otpExpiresAt = Date.now() + 600000;
+        startOtpTimer();
+        errEl.classList.add('hidden');
+        $('step2-btn').disabled = true;
+        otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        otpBoxes[0].focus();
+        link.textContent = 'Resend OTP (sent!)';
+        setTimeout(() => { link.textContent = 'Resend OTP'; }, 3000);
+      } catch (err) {
+        const match = err.message.match(/^Please wait (\d+)s/);
+        if (match) {
+          startCooldown(parseInt(match[1]), link, errEl);
+        } else {
+          link.textContent = 'Resend OTP';
+          errEl.textContent = err.message;
+          errEl.classList.remove('hidden');
+        }
+      }
+    });
+
+    /* ─── Cooldown ─── */
+    function startCooldown(sec, el, errEl) {
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0.5';
+      errEl.textContent = `Please wait ${sec}s before requesting a new OTP.`;
+      errEl.classList.remove('hidden');
+      otpCooldownTimer = setInterval(() => {
+        sec--;
+        if (sec <= 0) {
+          clearInterval(otpCooldownTimer);
+          otpCooldownTimer = null;
+          el.style.pointerEvents = '';
+          el.style.opacity = '';
+          errEl.classList.add('hidden');
+        } else {
+          errEl.textContent = `Please wait ${sec}s before requesting a new OTP.`;
+        }
+      }, 1000);
+    }
+
+    /* ─── Step 3: Complete Signup ─── */
+    $('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = $('signup-name').value.trim();
+      const password = $('signup-password').value;
+      const confirm = $('signup-confirm').value;
+      const errEl = $('step3-error');
+      const sucEl = $('step3-success');
+      const btn = $('step3-btn');
+      errEl.classList.add('hidden');
+      sucEl.classList.add('hidden');
+
+      if (!name) { errEl.textContent = 'Please enter your name'; errEl.classList.remove('hidden'); return; }
+      if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('hidden'); return; }
+      if (password !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.classList.remove('hidden'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+
+      try {
+        const otp = getOtpValue();
+        const result = await completeSignupApi(signupEmail, otp, name, password);
+        if (result.success) {
+          sucEl.innerHTML = '<i class="fas fa-check-circle"></i> Account created! Redirecting...';
+          sucEl.classList.remove('hidden');
+          document.querySelectorAll('#profile-form input, #profile-form button').forEach(el => el.disabled = true);
+          setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+        }
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+      }
+    });
+
+    /* ─── Helpers ─── */
     function togglePassword(btn) {
       const input = btn.parentElement.querySelector('input');
       const icon = btn.querySelector('i');
@@ -113,56 +428,9 @@
       });
     }
 
-    const signupForm = document.getElementById('signup-form');
-    const signupBtn = document.getElementById('signup-btn');
-    const signupError = document.getElementById('signup-error');
-    const signupSuccess = document.getElementById('signup-success');
-
-    function setSignupBtnLoading(loading) {
-      signupBtn.disabled = loading;
-      if (loading) {
-        signupBtn.classList.add('btn-loading');
-        signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
-      } else {
-        signupBtn.classList.remove('btn-loading');
-        signupBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
-      }
-    }
-
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      signupError.classList.add('hidden');
-      signupSuccess.classList.add('hidden');
-
-      const email = document.getElementById('signup-email').value.trim();
-      const name = document.getElementById('signup-name').value.trim();
-      const password = document.getElementById('signup-password').value;
-      const confirm = document.getElementById('signup-confirm').value;
-
-      if (!email) { signupError.textContent = 'Please enter your email'; signupError.classList.remove('hidden'); return; }
-      if (!name) { signupError.textContent = 'Please enter your name'; signupError.classList.remove('hidden'); return; }
-      if (password.length < 6) { signupError.textContent = 'Password must be at least 6 characters'; signupError.classList.remove('hidden'); return; }
-      if (password !== confirm) { signupError.textContent = 'Passwords do not match'; signupError.classList.remove('hidden'); return; }
-
-      setSignupBtnLoading(true);
-      try {
-        const result = await registerApi(name, email, password);
-        if (result.success) {
-          signupSuccess.innerHTML = '<i class="fas fa-check-circle"></i> Account created! Redirecting...';
-          signupSuccess.classList.remove('hidden');
-          signupForm.querySelectorAll('input, button').forEach(el => el.disabled = true);
-          setTimeout(() => { window.location.href = 'index.html'; }, 1200);
-        }
-      } catch (err) {
-        signupError.textContent = err.message;
-        signupError.classList.remove('hidden');
-        setSignupBtnLoading(false);
-      }
-    });
-
     initTheme();
     updateCartCount();
-    (function(){var v=document.querySelector('.auth-video-bg');if(v)v.play()['catch'](function(){function t(){v.play()['catch'](function(){});document.removeEventListener('touchstart',t);document.removeEventListener('click',t);}document.addEventListener('touchstart',t,{once:true});document.addEventListener('click',t,{once:true});});})();
   </script>
+
 </body>
 </html>
