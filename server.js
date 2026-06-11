@@ -87,7 +87,7 @@ async function sendEmail({ to, subject, html }) {
     }
   }
 
-  throw new Error('Could not send email. Your hosting provider blocks outbound SMTP. Add SENDGRID_API_KEY env var to use SendGrid API instead.');
+  throw new Error('Could not send email via SMTP. Add SENDGRID_API_KEY env var to use SendGrid API instead.');
 }
 
 function escapeHtml(text) {
