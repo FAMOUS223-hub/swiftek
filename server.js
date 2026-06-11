@@ -54,7 +54,43 @@ async function sendEmail({ to, subject, html }) {
 
   const errors = [];
 
-  // 1. Brevo (Sendinblue) API — free 300 emails/day, fastest & most reliable
+  // 1. Resend — free 100 emails/day, best deliverability even with freemail senders
+  if (process.env.RESEND_API_KEY) {
+    console.log('[EMAIL] Attempting Resend...');
+    try {
+      const resendFrom = process.env.RESEND_FROM || `onboarding@resend.dev`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${resendFrom}>`,
+          to: [to],
+          subject,
+          html
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Resend ${res.status}: ${text}`);
+      }
+      console.log('[EMAIL] Sent via Resend to', to);
+      return;
+    } catch (err) {
+      console.error('[EMAIL] Resend failed:', err.message);
+      errors.push(`Resend: ${err.message}`);
+    }
+  } else {
+    console.log('[EMAIL] Resend not configured (set RESEND_API_KEY)');
+  }
+
+  // 2. Brevo (Sendinblue) API — free 300 emails/day
   if (process.env.BREVO_API_KEY) {
     console.log('[EMAIL] Attempting Brevo API...');
     try {
@@ -170,7 +206,7 @@ async function sendEmail({ to, subject, html }) {
 
   throw new Error(
     'Email delivery failed. Tried:\n' + errors.join('\n') + '\n\n' +
-    'Solution: Set BREVO_API_KEY on Render (free at brevo.com, 300 emails/day)'
+    'Solution: Set RESEND_API_KEY on Render (free at resend.com, 100 emails/day)'
   );
 }
 
