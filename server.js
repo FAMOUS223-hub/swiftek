@@ -42,13 +42,28 @@ function makeSmtpConfig(host, port, secure, user, pass, servername) {
 }
 
 async function sendEmail({ to, subject, html }) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@swiftek.com';
+
+  if (process.env.SENDGRID_API_KEY) {
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    try {
+      await sgMail.send({ to, from, subject, html });
+      console.log('[EMAIL] Sent via SendGrid to', to);
+      return;
+    } catch (err) {
+      console.error('[EMAIL] SendGrid failed:', err.message);
+      if (err.response) console.error('[EMAIL] SendGrid response:', err.response.body);
+      throw new Error('SendGrid failed: ' + err.message);
+    }
+  }
+
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const hostname = process.env.SMTP_HOST;
-  const from = process.env.SMTP_FROM || user || 'noreply@swiftek.com';
 
   if (!hostname || !user || !pass) {
-    throw new Error('Set SMTP_HOST, SMTP_USER, and SMTP_PASS in environment variables');
+    throw new Error('Set SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS in environment variables');
   }
 
   const port587 = parseInt(process.env.SMTP_PORT || '587');
@@ -68,7 +83,6 @@ async function sendEmail({ to, subject, html }) {
     }
   }
 
-  console.log('[EMAIL] Standard SMTP failed, trying direct IP lookup via Google DNS...');
   const ips = await resolveSmtpHost(hostname);
   if (ips.length) {
     for (const port of [port587, 465]) {
@@ -87,7 +101,7 @@ async function sendEmail({ to, subject, html }) {
     }
   }
 
-  throw new Error('Could not send email via SMTP. Add SENDGRID_API_KEY env var to use SendGrid API instead.');
+  throw new Error('Could not send email. If using Render, add SENDGRID_API_KEY env var.');
 }
 
 function escapeHtml(text) {
