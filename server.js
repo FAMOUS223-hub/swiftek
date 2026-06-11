@@ -47,66 +47,131 @@ function makeSmtpConfig(host, port, secure, user, pass, servername) {
 }
 
 async function sendEmail({ to, subject, html }) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@swiftek.com';
+  const fromName = 'SwifTek Accessories';
+  const rawEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@swiftek.com';
+  const fromAddr = rawEmail.includes('<') ? rawEmail.replace(/.*<(.+)>$/, '$1') : rawEmail;
+  const from = rawEmail.includes('<') ? rawEmail : `${fromName} <${rawEmail}>`;
 
-  if (process.env.SENDGRID_API_KEY) {
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const errors = [];
+
+  // 1. Brevo (Sendinblue) API — free 300 emails/day, fastest & most reliable
+  if (process.env.BREVO_API_KEY) {
+    console.log('[EMAIL] Attempting Brevo API...');
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromAddr },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Brevo API ${res.status}: ${text}`);
+      }
+      console.log('[EMAIL] Sent via Brevo API to', to);
+      return;
+    } catch (err) {
+      console.error('[EMAIL] Brevo failed:', err.message);
+      errors.push(`Brevo: ${err.message}`);
+    }
+  } else {
+    console.log('[EMAIL] Brevo not configured (set BREVO_API_KEY)');
+  }
+
+  // 2. SendGrid — free 100 emails/day
+  if (process.env.SENDGRID_API_KEY) {
+    console.log('[EMAIL] Attempting SendGrid...');
+    try {
+      const sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
       await sgMail.send({ to, from, subject, html });
       console.log('[EMAIL] Sent via SendGrid to', to);
       return;
     } catch (err) {
       console.error('[EMAIL] SendGrid failed:', err.message);
+      errors.push(`SendGrid: ${err.message}`);
       if (err.response) console.error('[EMAIL] SendGrid response:', err.response.body);
-      throw new Error('SendGrid failed: ' + err.message);
     }
+  } else {
+    console.log('[EMAIL] SendGrid not configured (set SENDGRID_API_KEY)');
   }
 
+  // 3. SMTP (any provider: Gmail, Brevo SMTP, etc.)
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const hostname = process.env.SMTP_HOST;
 
-  if (!hostname || !user || !pass) {
-    throw new Error('Set SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS in environment variables');
-  }
+  if (hostname && user && pass) {
+    console.log('[EMAIL] Attempting SMTP', hostname + '...');
+    const port587 = parseInt(process.env.SMTP_PORT || '587');
 
-  const port587 = parseInt(process.env.SMTP_PORT || '587');
-  const configs = [
-    makeSmtpConfig(hostname, port587, false, user, pass),
-    makeSmtpConfig(hostname, 465, true, user, pass)
-  ];
-
-  for (const config of configs) {
+    // Check if the host resolves at all
     try {
-      const t = nodemailer.createTransport(config);
-      const info = await t.sendMail({ from, to, subject, html });
-      console.log('[EMAIL] Sent via', config.host + ':' + config.port, 'to', to);
-      return info;
-    } catch (err) {
-      console.error('[EMAIL]', config.host + ':' + config.port, err.message);
+      const testIps = await resolveSmtpHost(hostname);
+      console.log('[EMAIL] DNS resolved', hostname, '->', testIps.length ? testIps.join(',') : 'NO IPS');
+    } catch (dnsErr) {
+      console.error('[EMAIL] DNS failed for', hostname + ':', dnsErr.message);
     }
-  }
 
-  const ips = await resolveSmtpHost(hostname);
-  if (ips.length) {
-    for (const port of [port587, 465]) {
-      const secure = port === 465;
-      for (const ip of ips) {
-        try {
-          const cfg = makeSmtpConfig(ip, port, secure, user, pass, hostname);
-          const t = nodemailer.createTransport(cfg);
-          const info = await t.sendMail({ from, to, subject, html });
-          console.log('[EMAIL] Sent via', ip + ':' + port, 'to', to);
-          return info;
-        } catch (err) {
-          console.error('[EMAIL]', ip + ':' + port, err.message);
+    const configs = [
+      makeSmtpConfig(hostname, port587, false, user, pass),
+      makeSmtpConfig(hostname, 465, true, user, pass)
+    ];
+
+    for (const config of configs) {
+      try {
+        const t = nodemailer.createTransport(config);
+        const info = await t.sendMail({ from, to, subject, html });
+        console.log('[EMAIL] Sent via', config.host + ':' + config.port, 'to', to);
+        return info;
+      } catch (err) {
+        const msg = config.host + ':' + config.port + ' - ' + err.message;
+        console.error('[EMAIL]', msg);
+        errors.push(`SMTP ${msg}`);
+      }
+    }
+
+    // 4. DNS resolution fallback (try each resolved IP)
+    const ips = await resolveSmtpHost(hostname);
+    if (ips.length) {
+      console.log('[EMAIL] Trying DNS fallback with', ips.length, 'IPs...');
+      for (const port of [port587, 465]) {
+        const secure = port === 465;
+        for (const ip of ips) {
+          try {
+            const cfg = makeSmtpConfig(ip, port, secure, user, pass, hostname);
+            const t = nodemailer.createTransport(cfg);
+            const info = await t.sendMail({ from, to, subject, html });
+            console.log('[EMAIL] Sent via', ip + ':' + port, 'to', to);
+            return info;
+          } catch (err) {
+            const msg = ip + ':' + port + ' - ' + err.message;
+            console.error('[EMAIL]', msg);
+            errors.push(`SMTP ${msg}`);
+          }
         }
       }
     }
+  } else {
+    console.log('[EMAIL] SMTP not configured (set SMTP_HOST/SMTP_USER/SMTP_PASS)');
   }
 
-  throw new Error('Could not send email. If using Render, add SENDGRID_API_KEY env var.');
+  throw new Error(
+    'Email delivery failed. Tried:\n' + errors.join('\n') + '\n\n' +
+    'Solution: Set BREVO_API_KEY on Render (free at brevo.com, 300 emails/day)'
+  );
 }
 
 function escapeHtml(text) {
@@ -349,8 +414,6 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
       sentAt: new Date()
     });
 
-    res.json({ success: true, message: 'OTP sent to your email.' });
-
     const expiryTime = expiresAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     const expiryDate = expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const isToday = expiresAt.toDateString() === new Date().toDateString();
@@ -441,15 +504,14 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
       '</html>'
     ].join('\n');
 
-    sendEmail({
+    await sendEmail({
       to: normalized,
       subject: 'Verify your email — SwifTek Accessories',
       html: emailHtml
-    }).then(() => {
-      console.log('[SIGNUP OTP] Sent to', normalized);
-    }).catch(err => {
-      console.error('[SIGNUP OTP FAILED]', err.message);
     });
+
+    console.log('[SIGNUP OTP] Sent to', normalized);
+    res.json({ success: true, message: 'OTP sent to your email.' });
   } catch (err) {
     console.error('[SEND-SIGNUP-OTP ERROR]', err);
     res.status(500).json({ error: 'Failed to send OTP: ' + err.message });
@@ -764,19 +826,20 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       '</html>'
     ].join('\n');
 
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset your password — SwifTek Accessories',
+        html: emailHtml
+      });
+      console.log('[EMAIL] Password reset OTP sent to', user.email);
+    } catch (err) {
+      console.error('[EMAIL] Password reset OTP failed:', err.message);
+    }
+
     res.json({
       success: true,
       message: 'If that email exists, an OTP has been sent.'
-    });
-
-    sendEmail({
-      to: user.email,
-      subject: 'Reset your password — SwifTek Accessories',
-      html: emailHtml
-    }).then(() => {
-      console.log('[EMAIL] Password reset OTP sent to', user.email);
-    }).catch(err => {
-      console.error('[EMAIL] Password reset OTP failed:', err.message);
     });
   } catch (err) {
     console.error('[FORGOT-PASSWORD ERROR]', err.message);
