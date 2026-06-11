@@ -18,6 +18,11 @@ const forgotPasswordCss = fs.readFileSync(
   'utf8'
 );
 
+const orderStatusCss = fs.readFileSync(
+  path.join(__dirname, 'public', 'css', 'email-order-status.css'),
+  'utf8'
+);
+
 const dnsOverGoogle = new Resolver();
 dnsOverGoogle.setServers(['8.8.8.8', '1.1.1.1']);
 
@@ -1130,7 +1135,7 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
     if (status !== 'pending' && order.userId?.email) {
       const user = order.userId;
       const itemsList = order.items.map(i =>
-        `<tr><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;">${escapeHtml(i.name)}${i.specs ? '<br><span style="font-size:12px;color:#8e8e93;">' + escapeHtml(i.specs) + '</span>' : ''}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:center;">x${i.qty}</td><td style="padding:8px 0;border-bottom:1px solid #e8e8ed;font-size:14px;color:#1d1d1f;text-align:right;">GH₵ ${i.price.toFixed(2)}</td></tr>`
+        `<tr><td class="os-item-cell">${escapeHtml(i.name)}${i.specs ? '<br><span class="os-item-specs">' + escapeHtml(i.specs) + '</span>' : ''}</td><td class="os-item-qty">x${i.qty}</td><td class="os-item-price">GH₵ ${i.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`
       ).join('');
 
       const statusConfig = {
@@ -1148,83 +1153,84 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>${orderStatusCss}</style>
         </head>
-        <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;">
+        <body>
+          <table class="os-outer-table" role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td align="center" style="padding:40px 16px;">
-                <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+              <td class="os-wrapper" align="center">
+                <table class="os-container" role="presentation" width="520" cellpadding="0" cellspacing="0">
 
                   <tr>
-                    <td style="background:linear-gradient(135deg,#0071e3 0%,#002b5e 100%);border-radius:16px 16px 0 0;padding:36px 32px 28px;text-align:center;">
-                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 14px;">
+                    <td class="os-header">
+                      <table class="os-logo-table" role="presentation" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td align="center" style="width:56px;height:56px;font-size:28px;font-weight:800;color:#ffffff;line-height:56px;background:rgba(255,255,255,0.15);border-radius:16px;">S</td>
-                          <td style="width:8px;"></td>
+                          <td class="os-logo-cell" align="center">S</td>
+                          <td class="os-logo-gap"></td>
                           <td align="left" valign="middle">
                             <table role="presentation" cellpadding="0" cellspacing="0">
-                              <tr><td style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:2.5px;text-transform:uppercase;">SwifTek</td></tr>
-                              <tr><td style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);letter-spacing:4px;text-transform:uppercase;">Accessories</td></tr>
+                              <tr><td class="os-brand-name">SwifTek</td></tr>
+                              <tr><td class="os-brand-sub">Accessories</td></tr>
                             </table>
                           </td>
                         </tr>
                       </table>
-                      <div style="width:40px;height:2px;background:rgba(255,255,255,0.2);border-radius:1px;margin:0 auto;"></div>
+                      <div class="os-divider"></div>
                     </td>
                   </tr>
 
                   <tr>
-                    <td style="background:#ffffff;padding:32px;border-radius:0 0 16px 16px;">
+                    <td class="os-content">
 
-                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+                      <table class="os-badge-table" role="presentation" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td align="center" style="width:72px;height:72px;border-radius:50%;background:${badgeColor}20;text-align:center;">
-                            <span style="font-size:32px;color:${badgeColor};">${badgeIcon}</span>
+                          <td class="os-badge-cell" align="center" style="background:${badgeColor}20;">
+                            <span class="os-badge-icon" style="color:${badgeColor};">${badgeIcon}</span>
                           </td>
                         </tr>
                       </table>
 
-                      <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;text-align:center;margin:0 0 6px;letter-spacing:-0.3px;">${heading}</h1>
-                      <p style="font-size:16px;color:#6e6e73;text-align:center;margin:0 0 28px;line-height:1.5;">${message}</p>
+                      <h1 class="os-heading">${heading}</h1>
+                      <p class="os-message">${message}</p>
 
-                      <table role="presentation" cellpadding="0" cellspacing="0" style="background:#f5f5f7;border-radius:12px;width:100%;margin-bottom:24px;">
+                      <table class="os-info-card" role="presentation" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td style="padding:16px 20px;">
+                          <td class="os-info-padding">
                             <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                               <tr>
-                                <td style="font-size:13px;color:#8e8e93;">Order Reference</td>
-                                <td style="font-size:13px;color:#1d1d1f;font-weight:600;text-align:right;">${escapeHtml(order.orderRef)}</td>
+                                <td class="os-info-label">Order Reference</td>
+                                <td class="os-info-value">${escapeHtml(order.orderRef)}</td>
                               </tr>
                               <tr>
-                                <td style="font-size:13px;color:#8e8e93;padding-top:6px;">Date</td>
-                                <td style="font-size:13px;color:#1d1d1f;text-align:right;padding-top:6px;">${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</td>
+                                <td class="os-info-label-top">Date</td>
+                                <td class="os-info-value-plain-top">${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</td>
                               </tr>
                             </table>
                           </td>
                         </tr>
                       </table>
 
-                      <h3 style="font-size:14px;font-weight:600;color:#1d1d1f;margin:0 0 10px;">Items Ordered</h3>
-                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
+                      <h3 class="os-items-title">Items Ordered</h3>
+                      <table class="os-items-table" role="presentation" cellpadding="0" cellspacing="0" width="100%">
                         ${itemsList}
                       </table>
 
                       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                         <tr>
-                          <td style="border-top:2px solid #1d1d1f;padding:12px 0 0;">
+                          <td class="os-total-border">
                             <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                               <tr>
-                                <td style="font-size:15px;font-weight:700;color:#1d1d1f;">Total</td>
-                                <td style="font-size:18px;font-weight:700;color:#1d1d1f;text-align:right;">GH₵ ${order.total.toFixed(2)}</td>
+                                <td class="os-total-label">Total</td>
+                                <td class="os-total-amount">GH₵ ${order.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               </tr>
                             </table>
                           </td>
                         </tr>
                       </table>
 
-                      <p style="font-size:13px;color:#8e8e93;text-align:center;margin:0 0 4px;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Store</p>
-                      <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:0;">Accra, Ghana &middot; Built by Famous Tech</p>
-                      <p style="font-size:12px;color:#aeaeb2;text-align:center;margin:16px 0 0;">Need help? Contact us on <a href="https://wa.me/233204694657" style="color:#0071e3;text-decoration:none;font-weight:600;">WhatsApp</a></p>
+                      <p class="os-footer-text">SwifTek Accessories &mdash; Premium Tech Store</p>
+                      <p class="os-footer-sub">Accra, Ghana &middot; Built by Famous Tech</p>
+                      <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/233204694657">WhatsApp</a></p>
 
                     </td>
                   </tr>

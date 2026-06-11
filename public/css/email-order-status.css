@@ -1,0 +1,236 @@
+/* ───── SwifTek Order Status Email Styles ───── */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.os-outer-table {
+  background-color: #f5f5f7;
+}
+
+.os-wrapper {
+  padding: 40px 16px;
+}
+
+.os-container {
+  max-width: 520px;
+  width: 100%;
+}
+
+.os-header {
+  background: linear-gradient(135deg, #0071e3 0%, #002b5e 100%);
+  border-radius: 16px 16px 0 0;
+  padding: 36px 32px 28px;
+  text-align: center;
+}
+
+.os-logo-table {
+  margin: 0 auto 14px;
+}
+
+.os-logo-cell {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 56px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+}
+
+.os-logo-gap {
+  width: 8px;
+}
+
+.os-brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.os-brand-sub {
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.os-divider {
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1px;
+  margin: 0 auto;
+}
+
+.os-content {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 0 0 16px 16px;
+}
+
+.os-badge-table {
+  margin: 0 auto 24px;
+}
+
+.os-badge-cell {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.os-badge-icon {
+  font-size: 32px;
+}
+
+.os-heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d1d1f;
+  text-align: center;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.os-message {
+  font-size: 16px;
+  color: #6e6e73;
+  text-align: center;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+.os-info-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.os-info-padding {
+  padding: 16px 20px;
+}
+
+.os-info-label {
+  font-size: 13px;
+  color: #8e8e93;
+}
+
+.os-info-value {
+  font-size: 13px;
+  color: #1d1d1f;
+  font-weight: 600;
+  text-align: right;
+}
+
+.os-info-value-plain {
+  font-size: 13px;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-info-value-plain-top {
+  font-size: 13px;
+  color: #1d1d1f;
+  text-align: right;
+  padding-top: 6px;
+}
+
+.os-info-label-top {
+  font-size: 13px;
+  color: #8e8e93;
+  padding-top: 6px;
+}
+
+.os-items-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 10px;
+}
+
+.os-items-table {
+  margin-bottom: 20px;
+}
+
+.os-item-cell {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+}
+
+.os-item-specs {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.os-item-qty {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+  text-align: center;
+}
+
+.os-item-price {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-total-border {
+  border-top: 2px solid #1d1d1f;
+  padding: 12px 0 0;
+}
+
+.os-total-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.os-total-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-footer-text {
+  font-size: 13px;
+  color: #8e8e93;
+  text-align: center;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.os-footer-sub {
+  font-size: 12px;
+  color: #aeaeb2;
+  text-align: center;
+  margin: 0;
+}
+
+.os-footer-link {
+  font-size: 12px;
+  color: #aeaeb2;
+  text-align: center;
+  margin: 16px 0 0;
+}
+
+.os-footer-link a {
+  color: #0071e3;
+  text-decoration: none;
+  font-weight: 600;
+}
