@@ -112,7 +112,12 @@ async function fetchProduct(id) {
 // ───── User Auth ─────
 
 async function registerApi(name, email, password) {
-  return apiPost('/api/auth/register', { name, email, password }, true);
+  const result = await apiPost('/api/auth/register', { name, email, password }, true);
+  if (result.token) {
+    localStorage.setItem('swiftek_user_token', result.token);
+    localStorage.setItem('swiftek_user_data', JSON.stringify({ ...result.user, role: result.role }));
+  }
+  return result;
 }
 
 async function sendSignupOtpApi(email) {

@@ -269,28 +269,39 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const normalized = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: normalized });
     if (existing) {
       return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
-    const verificationToken = generateToken();
     const user = await User.create({
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalized,
       password,
-      verificationToken
+      verified: true
     });
 
-    const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
-    console.log(`[VERIFY] ${user.email} -> ${verifyUrl}`);
+    const token = generateToken();
+    await Session.create({
+      token,
+      userId: user._id,
+      role: user.role,
+      createdAt: new Date(),
+      lastUsed: new Date()
+    });
 
+    const userData = { id: user._id, name: user.name, email: user.email, role: user.role, isSuperAdmin: false };
+    console.log('[REGISTER] User created and auto-logged in:', user.email);
     res.json({
       success: true,
-      message: 'Account created! Check your email to verify your account.',
-      verifyUrl
+      message: 'Account created successfully!',
+      token,
+      role: user.role,
+      user: userData
     });
   } catch (err) {
+    console.error('[REGISTER ERROR]', err.message);
     res.status(500).json({ error: 'Registration failed' });
   }
 });
