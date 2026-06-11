@@ -573,9 +573,21 @@ async function renderProductDetail() {
       <div class="product-tabs">
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchTab(this, 'specs')">Specifications</button>
+          <button class="tab-btn" onclick="switchTab(this, 'reviews')">Reviews</button>
+          <button class="tab-btn" onclick="switchTab(this, 'comments')">Comments</button>
         </div>
         <div class="tab-content active" id="tab-specs">
           <div class="specs-grid">${specsRows}</div>
+        </div>
+        <div class="tab-content" id="tab-reviews">
+          <div id="reviews-container">
+            <div class="reviews-loading">Loading reviews...</div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-comments">
+          <div id="comments-container">
+            <div class="comments-loading">Loading comments...</div>
+          </div>
         </div>
       </div>
     </div>
@@ -618,7 +630,192 @@ async function renderProductDetail() {
 
   renderGallery();
   updatePrice();
+
+  renderRatings(product.id);
+  renderComments(product.id);
 }
+
+function renderStars(rating) {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    if (i <= full) html += '<i class="fas fa-star star-filled"></i>';
+    else if (i === full + 1 && half) html += '<i class="fas fa-star-half-alt star-filled"></i>';
+    else html += '<i class="far fa-star star-empty"></i>';
+  }
+  return html;
+}
+
+async function renderRatings(productId) {
+  const container = document.getElementById('reviews-container');
+  if (!container) return;
+
+  try {
+    const data = await fetchProductRatings(productId);
+    const userData = getUserData();
+    const token = getUserToken();
+    let userRating = null;
+
+    if (token && userData) {
+      userRating = data.ratings.find(r => r.userId && r.userId._id === userData.id);
+    }
+
+    let html = '';
+
+    // Average rating display
+    if (data.count > 0) {
+      html += `
+        <div class="reviews-summary">
+          <div class="reviews-avg">${data.average.toFixed(1)}</div>
+          <div class="reviews-stars-large">${renderStars(data.average)}</div>
+          <div class="reviews-count">${data.count} review${data.count !== 1 ? 's' : ''}</div>
+        </div>
+      `;
+    }
+
+    // Rating form (only for logged-in users)
+    if (token && userData) {
+      html += `
+        <div class="review-form">
+          <h4>${userRating ? 'Your Review' : 'Write a Review'}</h4>
+          <div class="rating-input">
+            ${[1,2,3,4,5].map(s => `
+              <i class="fas fa-star ${userRating && s <= userRating.rating ? 'star-filled' : 'star-empty'}"
+                 data-value="${s}" onclick="setRating(${s})" id="star-${s}"></i>
+            `).join('')}
+          </div>
+          <input type="hidden" id="selected-rating" value="${userRating ? userRating.rating : 0}">
+          <textarea class="review-textarea" id="review-text" placeholder="Write your review (optional)">${userRating ? userRating.review : ''}</textarea>
+          <button class="admin-btn admin-btn-primary" onclick="submitReview(${productId})">
+            ${userRating ? 'Update Review' : 'Submit Review'}
+          </button>
+          <p class="review-error hidden" id="review-error"></p>
+        </div>
+      `;
+    }
+
+    // Reviews list
+    if (data.ratings.length > 0) {
+      const reviewsList = data.ratings.map(r => `
+        <div class="review-item">
+          <div class="review-header">
+            <span class="review-author">${r.userId ? escapeHtml(r.userId.name) : 'Anonymous'}</span>
+            <span class="review-stars">${renderStars(r.rating)}</span>
+            <span class="review-date">${new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          </div>
+          ${r.review ? `<div class="review-text">${escapeHtml(r.review)}</div>` : ''}
+        </div>
+      `).join('');
+      html += `<div class="reviews-list">${reviewsList}</div>`;
+    } else if (!token) {
+      html += '<p class="reviews-empty">No reviews yet. <a href="login.html">Log in</a> to leave a review.</p>';
+    }
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<p class="reviews-empty">Failed to load reviews.</p>';
+  }
+}
+
+window.setRating = function(value) {
+  document.getElementById('selected-rating').value = value;
+  for (let i = 1; i <= 5; i++) {
+    const star = document.getElementById(`star-${i}`);
+    if (star) {
+      star.className = i <= value ? 'fas fa-star star-filled' : 'far fa-star star-empty';
+    }
+  }
+};
+
+window.submitReview = async function(productId) {
+  const rating = parseInt(document.getElementById('selected-rating').value);
+  const review = document.getElementById('review-text').value.trim();
+  const errorEl = document.getElementById('review-error');
+
+  if (!rating || rating < 1) {
+    errorEl.textContent = 'Please select a star rating';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    await submitRatingApi(productId, rating, review);
+    errorEl.classList.add('hidden');
+    showToast('Review submitted!');
+    renderRatings(productId);
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  }
+};
+
+async function renderComments(productId) {
+  const container = document.getElementById('comments-container');
+  if (!container) return;
+
+  try {
+    const data = await fetchProductComments(productId);
+    const userData = getUserData();
+    const token = getUserToken();
+
+    let html = '';
+
+    // Comment form (only for logged-in users)
+    if (token && userData) {
+      html += `
+        <div class="comment-form">
+          <h4>Leave a Comment</h4>
+          <textarea class="comment-textarea" id="comment-text" placeholder="Share your thoughts about this product..."></textarea>
+          <button class="admin-btn admin-btn-primary" onclick="submitComment(${productId})">Post Comment</button>
+          <p class="comment-error hidden" id="comment-error"></p>
+        </div>
+      `;
+    }
+
+    // Comments list
+    if (data.comments.length > 0) {
+      const commentsList = data.comments.map(c => `
+        <div class="comment-item">
+          <div class="comment-header">
+            <span class="comment-author">${c.userId ? escapeHtml(c.userId.name) : 'Anonymous'}</span>
+            <span class="comment-date">${new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="comment-text">${escapeHtml(c.text)}</div>
+        </div>
+      `).join('');
+      html += `<div class="comments-list">${commentsList}</div>`;
+    } else {
+      html += '<p class="comments-empty">No comments yet. Be the first to comment!</p>';
+    }
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<p class="comments-empty">Failed to load comments.</p>';
+  }
+}
+
+window.submitComment = async function(productId) {
+  const text = document.getElementById('comment-text').value.trim();
+  const errorEl = document.getElementById('comment-error');
+
+  if (!text) {
+    errorEl.textContent = 'Please write a comment';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    await submitCommentApi(productId, text);
+    document.getElementById('comment-text').value = '';
+    errorEl.classList.add('hidden');
+    showToast('Comment posted!');
+    renderComments(productId);
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  }
+};
 
 function initSearch() {
   const searchInputs = document.querySelectorAll('.search-input');

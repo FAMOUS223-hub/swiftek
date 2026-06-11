@@ -301,6 +301,26 @@ async function deleteAdminApi(adminId) {
 
 // ───── Session helpers ─────
 
+// ───── Ratings ─────
+
+async function fetchProductRatings(productId) {
+  return apiGet(`/api/products/${productId}/ratings`);
+}
+
+async function submitRatingApi(productId, rating, review) {
+  return apiPost(`/api/products/${productId}/ratings`, { rating, review });
+}
+
+// ───── Comments ─────
+
+async function fetchProductComments(productId) {
+  return apiGet(`/api/products/${productId}/comments`);
+}
+
+async function submitCommentApi(productId, text) {
+  return apiPost(`/api/products/${productId}/comments`, { text });
+}
+
 function clearUserSession() {
   localStorage.removeItem('swiftek_user_token');
   localStorage.removeItem('swiftek_user_data');

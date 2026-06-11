@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>/* ───── SwifTek Order Status Email Styles ───── */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.os-outer-table {
+  background-color: #f5f5f7;
+}
+
+.os-wrapper {
+  padding: 40px 16px;
+}
+
+.os-container {
+  max-width: 520px;
+  width: 100%;
+}
+
+.os-header {
+  background: linear-gradient(135deg, #0071e3 0%, #002b5e 100%);
+  border-radius: 16px 16px 0 0;
+  padding: 36px 32px 28px;
+  text-align: center;
+}
+
+.os-logo-table {
+  margin: 0 auto 14px;
+}
+
+.os-logo-cell {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 56px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+}
+
+.os-logo-gap {
+  width: 8px;
+}
+
+.os-brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.os-brand-sub {
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.os-divider {
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1px;
+  margin: 0 auto;
+}
+
+.os-content {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 0 0 16px 16px;
+}
+
+.os-badge-table {
+  margin: 0 auto 24px;
+}
+
+.os-badge-cell {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.os-badge-icon {
+  font-size: 32px;
+}
+
+.os-heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d1d1f;
+  text-align: center;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.os-message {
+  font-size: 16px;
+  color: #6e6e73;
+  text-align: center;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+.os-info-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.os-info-padding {
+  padding: 16px 20px;
+}
+
+.os-info-label {
+  font-size: 13px;
+  color: #8e8e93;
+}
+
+.os-info-value {
+  font-size: 13px;
+  color: #1d1d1f;
+  font-weight: 600;
+  text-align: right;
+}
+
+.os-info-value-plain {
+  font-size: 13px;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-info-value-plain-top {
+  font-size: 13px;
+  color: #1d1d1f;
+  text-align: right;
+  padding-top: 6px;
+}
+
+.os-info-label-top {
+  font-size: 13px;
+  color: #8e8e93;
+  padding-top: 6px;
+}
+
+.os-items-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 10px;
+}
+
+.os-items-table {
+  margin-bottom: 20px;
+}
+
+.os-item-cell {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+}
+
+.os-item-specs {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.os-item-qty {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+  text-align: center;
+}
+
+.os-item-price {
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8ed;
+  font-size: 14px;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-total-border {
+  border-top: 2px solid #1d1d1f;
+  padding: 12px 0 0;
+}
+
+.os-total-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.os-total-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+  text-align: right;
+}
+
+.os-footer-text {
+  font-size: 13px;
+  color: #8e8e93;
+  text-align: center;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.os-footer-sub {
+  font-size: 12px;
+  color: #aeaeb2;
+  text-align: center;
+  margin: 0;
+}
+
+.os-footer-link {
+  font-size: 12px;
+  color: #aeaeb2;
+  text-align: center;
+  margin: 16px 0 0;
+}
+
+.os-footer-link a {
+  color: #0071e3;
+  text-decoration: none;
+  font-weight: 600;
+}
+</style></head>
+<body>
+<table class="os-outer-table" role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td class="os-wrapper" align="center">
+<table class="os-container" role="presentation" width="520" cellpadding="0" cellspacing="0">
+<tr><td class="os-header">
+<table class="os-logo-table" cellpadding="0" cellspacing="0"><tr>
+<td class="os-logo-cell" align="center">S</td><td class="os-logo-gap"></td>
+<td align="left" valign="middle">
+<table cellpadding="0" cellspacing="0">
+<tr><td class="os-brand-name">SwifTek</td></tr>
+<tr><td class="os-brand-sub">Accessories</td></tr>
+</table></td></tr></table>
+<div class="os-divider"></div>
+</td></tr>
+<tr><td class="os-content">
+<table class="os-badge-table" cellpadding="0" cellspacing="0"><tr>
+<td class="os-badge-cell" align="center" style="background:#30d15820;"><span class="os-badge-icon" style="color:#30d158;">✓</span></td></tr></table>
+<h1 class="os-heading">Order Confirmed</h1>
+<p class="os-message">Good news! Your order has been confirmed and is being processed.</p>
+<table class="os-info-card" cellpadding="0" cellspacing="0"><tr><td class="os-info-padding">
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr><td class="os-info-label">Order Reference</td><td class="os-info-value">SWF-A1B2C-D3</td></tr>
+<tr><td class="os-info-label-top">Date</td><td class="os-info-value-plain-top">12 June 2026</td></tr>
+</table></td></tr></table>
+<h3 class="os-items-title">Items Ordered</h3>
+<table class="os-items-table" width="100%" cellpadding="0" cellspacing="0">
+<tr><td class="os-item-cell">iPhone 15 Pro Case<br><span class="os-item-specs">Matte Black, MagSafe</span></td><td class="os-item-qty">x2</td><td class="os-item-price">GH₵ 1,200.00</td></tr>
+<tr><td class="os-item-cell">Tempered Glass Screen Protector</td><td class="os-item-qty">x3</td><td class="os-item-price">GH₵ 450.00</td></tr>
+<tr><td class="os-item-cell">USB-C Fast Charger<br><span class="os-item-specs">20W, White</span></td><td class="os-item-qty">x1</td><td class="os-item-price">GH₵ 850.50</td></tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td class="os-total-border">
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td class="os-total-label">Total</td>
+<td class="os-total-amount">GH₵ 2,500.50</td>
+</tr></table></td></tr></table>
+<p class="os-footer-text">SwifTek Accessories &mdash; Premium Tech Store</p>
+<p class="os-footer-sub">Accra, Ghana &middot; Built by Famous Tech</p>
+<p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/233204694657">WhatsApp</a></p>
+</td></tr></table></td></tr></table></body></html>

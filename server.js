@@ -235,6 +235,8 @@ const Config = require('./models/Config');
 const User = require('./models/User');
 const Order = require('./models/Order');
 const EmailVerification = require('./models/EmailVerification');
+const Rating = require('./models/Rating');
+const Comment = require('./models/Comment');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -313,6 +315,96 @@ app.get('/api/products/:id', async (req, res) => {
   const product = products.find(p => p.id === id);
   if (!product) return res.status(404).json({ error: 'Product not found' });
   res.json(product);
+});
+
+// ───── Ratings ─────
+
+app.post('/api/products/:id/ratings', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { rating, review } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    const existing = await Rating.findOne({ productId, userId: req.userId });
+    if (existing) {
+      existing.rating = rating;
+      if (review !== undefined) existing.review = review;
+      await existing.save();
+      return res.json({ success: true, rating: existing });
+    }
+
+    const newRating = await Rating.create({
+      productId,
+      userId: req.userId,
+      rating,
+      review: review || ''
+    });
+
+    res.json({ success: true, rating: newRating });
+  } catch (err) {
+    console.error('[RATING ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to submit rating' });
+  }
+});
+
+app.get('/api/products/:id/ratings', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const ratings = await Rating.find({ productId }).populate('userId', 'name').sort({ createdAt: -1 }).lean();
+    const stats = await Rating.aggregate([
+      { $match: { productId } },
+      { $group: { _id: null, average: { $avg: '$rating' }, count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      ratings,
+      average: stats.length ? Math.round(stats[0].average * 10) / 10 : 0,
+      count: stats.length ? stats[0].count : 0
+    });
+  } catch (err) {
+    console.error('[RATING FETCH ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to fetch ratings' });
+  }
+});
+
+// ───── Comments ─────
+
+app.post('/api/products/:id/comments', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
+
+    const comment = await Comment.create({
+      productId,
+      userId: req.userId,
+      text: text.trim()
+    });
+
+    const populated = await Comment.findById(comment._id).populate('userId', 'name').lean();
+    res.json({ success: true, comment: populated });
+  } catch (err) {
+    console.error('[COMMENT ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+app.get('/api/products/:id/comments', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const comments = await Comment.find({ productId })
+      .populate('userId', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ comments });
+  } catch (err) {
+    console.error('[COMMENT FETCH ERROR]', err.message);
+    res.status(500).json({ error: 'Failed to fetch comments' });
+  }
 });
 
 app.get('/api/stats', async (req, res) => {
