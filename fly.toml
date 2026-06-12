@@ -1,16 +1,16 @@
-# fly.toml app configuration file generated for swiftek on 2026-06-12T10:32:57Z
+# fly.toml app configuration file generated for swiftek on 2026-06-12T11:16:01Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'swiftek'
-primary_region = 'iad'
+primary_region = 'jnb'
 
 [build]
-  builder = "heroku/buildpacks:20"
+  builder = 'heroku/buildpacks:20'
 
 [env]
-  PORT = "8080"
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
