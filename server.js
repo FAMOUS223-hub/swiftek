@@ -95,7 +95,43 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] Resend not configured (set RESEND_API_KEY)');
   }
 
-  // 2. Brevo (Sendinblue) API — free 300 emails/day
+  // 2. MailerSend API — free 3000 emails/mo, trial sender without custom domain
+  if (process.env.MAILERSEND_API_KEY) {
+    console.log('[EMAIL] Attempting MailerSend...');
+    try {
+      const mailerSendFrom = process.env.MAILERSEND_FROM || 'MS_trial@trial-3yxj6ljkp8zldo2r.mlsender.net';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch('https://api.mailersend.com/v1/email', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.MAILERSEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: { email: mailerSendFrom, name: fromName },
+          to: [{ email: to }],
+          subject,
+          html
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`MailerSend ${res.status}: ${text}`);
+      }
+      console.log('[EMAIL] Sent via MailerSend to', to);
+      return;
+    } catch (err) {
+      console.error('[EMAIL] MailerSend failed:', err.message);
+      errors.push(`MailerSend: ${err.message}`);
+    }
+  } else {
+    console.log('[EMAIL] MailerSend not configured (set MAILERSEND_API_KEY)');
+  }
+
+  // 3. Brevo (Sendinblue) API — free 300 emails/day
   if (process.env.BREVO_API_KEY) {
     console.log('[EMAIL] Attempting Brevo API...');
     try {
@@ -211,7 +247,7 @@ async function sendEmail({ to, subject, html }) {
 
   throw new Error(
     'Email delivery failed. Tried:\n' + errors.join('\n') + '\n\n' +
-    'Solution: Set RESEND_API_KEY on Render (free at resend.com, 100 emails/day)'
+    'Solution: Set MAILERSEND_API_KEY or RESEND_API_KEY on Render'
   );
 }
 
