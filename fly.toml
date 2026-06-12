@@ -7,6 +7,10 @@ app = 'swiftek'
 primary_region = 'iad'
 
 [build]
+  builder = "heroku/buildpacks:20"
+
+[env]
+  PORT = "8080"
 
 [http_service]
   internal_port = 8080

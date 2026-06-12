@@ -1653,8 +1653,8 @@ async function start() {
     await seedProducts();
     await ensureConfig();
     await ensureAdminUser();
-    app.listen(PORT, () => {
-      console.log(`SwifTek server running at http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`SwifTek server running at http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
