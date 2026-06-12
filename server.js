@@ -240,7 +240,7 @@ const Comment = require('./models/Comment');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://nganbewuborijaamos_db_user:mynameis123MASTER@cluster1.hiezajm.mongodb.net/?appName=Cluster1';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
