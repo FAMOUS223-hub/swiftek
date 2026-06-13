@@ -2940,7 +2940,7 @@ select.admin-input { cursor: pointer; }
 @media (hover: hover) { .auth-btn:hover { background: var(--accent-hover); transform: translateY(-1px); } }
 .auth-error { color: #ff453a; font-size: 13px; font-weight: 500; margin-top: 8px; text-align: left; }
 .auth-success { color: #30d158; font-size: 13px; font-weight: 500; margin-top: 8px; text-align: left; }
-.auth-alt { font-size: 13px; color: var(--text-secondary); margin-top: 20px; }
+.auth-alt { font-size: 13px; color: var(--text-secondary); margin-top: 16px; }
 .auth-alt a { color: var(--accent); font-weight: 600; }
 @media (hover: hover) { .auth-alt a:hover { text-decoration: underline; } }
 
@@ -3534,4 +3534,78 @@ select.admin-input { cursor: pointer; }
   padding: 32px 16px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+/* ───── Inline style replacements ───── */
+.svg-sprite { visibility: hidden; position: absolute; width: 0; height: 0; }
+
+.admin-status-active { color: #30d158; font-weight: 600; }
+.admin-status-suspended { color: #ff9f0a; font-weight: 600; }
+.admin-status-revoked { color: #ff453a; font-weight: 600; }
+
+.admin-btn-sm-danger { color: #ff453a; border-color: #ff453a33; }
+.admin-btn-sm-danger:hover { background: rgba(255,69,58,0.1); }
+
+.admin-user-avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; background: var(--accent-light); color: var(--accent); flex-shrink: 0; }
+
+.admin-role-badge { font-size: 10px; background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 99px; }
+
+.admin-icon-verified { color: #30d158; }
+.admin-icon-unverified { color: #ff453a; }
+
+.admin-order-col { flex-direction: column; align-items: stretch; }
+.admin-order-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.admin-order-actions { display: flex; align-items: center; gap: 8px; }
+.admin-order-total { font-weight: 700; font-size: 13px; }
+.admin-order-items { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+
+.admin-badge-pending, .admin-badge-confirmed, .admin-badge-delivered, .admin-badge-cancelled {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+}
+.admin-badge-pending { background: #ff9f0a20; color: #ff9f0a; }
+.admin-badge-confirmed { background: #0071e320; color: #0071e3; }
+.admin-badge-delivered { background: #30d15820; color: #30d158; }
+.admin-badge-cancelled { background: #ff453a20; color: #ff453a; }
+
+.admin-mgmt-bar { margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.admin-empty-icon { font-size: 48px; color: var(--text-tertiary); margin-bottom: 12px; display: block; }
+.admin-perm-list { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-meta-mt6 { margin-top: 6px; }
+.admin-full-access { font-size: 12px; color: var(--text-tertiary); }
+.you-badge { background: var(--accent-light); color: var(--accent); }
+
+.skeleton-card-col { flex-direction: column; align-items: stretch; }
+.skeleton-card-header { display: flex; justify-content: space-between; align-items: center; }
+.skeleton-card-fill { flex: 1; }
+
+.profile-divider { border: none; border-top: 1px solid var(--border-light); margin: 16px 0; }
+.profile-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px; }
+.profile-label span { font-weight: 400; }
+
+.status-pending { background: #ff9f0a; }
+.status-confirmed { background: #0071e3; }
+.status-delivered { background: #30d158; }
+.status-cancelled { background: #ff453a; }
+
+.skel-w50 { width: 50%; }
+.skel-w30 { width: 30%; }
+.skel-w40 { width: 40%; }
+.skel-w80 { width: 80%; }
+.skel-w70 { width: 70%; }
+
+.skeleton-card-uo {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 14px;
+}
+.skeleton-card-uo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.skeleton-card-uo-body {
+  flex: 1;
 }

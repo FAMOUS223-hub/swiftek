@@ -106,8 +106,7 @@
     }
 
     function getStatusBadge(status) {
-      const colors = { pending: '#ff9f0a', confirmed: '#0071e3', delivered: '#30d158', cancelled: '#ff453a' };
-      return `<span class="status-badge" style="background:${colors[status] || '#86868b'}">${status}</span>`;
+      return `<span class="status-badge status-${status}">${status}</span>`;
     }
 
     async function loadOrders() {

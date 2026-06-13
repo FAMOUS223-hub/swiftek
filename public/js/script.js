@@ -1006,8 +1006,8 @@ function showUserProfileModal() {
             <label for="pe-email">Email</label>
             <input type="email" id="pe-email" class="admin-input" value="${escapeHtml(userData ? userData.email : '')}" autocomplete="off" placeholder="Your email">
           </div>
-          <hr style="border:none;border-top:1px solid var(--border-light);margin:16px 0;">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;">Change Password <span style="font-weight:400;">(leave blank to keep current)</span></label>
+          <hr class="profile-divider">
+          <label class="profile-label">Change Password <span>(leave blank to keep current)</span></label>
           <div class="admin-field">
             <label for="pe-current-pw">Current Password</label>
             <input type="password" id="pe-current-pw" class="admin-input" autocomplete="off" placeholder="Current password">

@@ -703,10 +703,10 @@ async function renderUsers() {
 
   container.innerHTML = users.map(u => {
     const statusBadge = u.status === 'active'
-      ? '<span style="color:#30d158;font-weight:600;">● Active</span>'
+      ? '<span class="admin-status-active">● Active</span>'
       : u.status === 'suspended'
-      ? '<span style="color:#ff9f0a;font-weight:600;">● Suspended</span>'
-      : '<span style="color:#ff453a;font-weight:600;">● Revoked</span>';
+      ? '<span class="admin-status-suspended">● Suspended</span>'
+      : '<span class="admin-status-revoked">● Revoked</span>';
 
     let statusActions = '';
     if (u.status === 'active') {
@@ -716,28 +716,28 @@ async function renderUsers() {
           <button class="admin-btn-sm admin-btn-outline" onclick="revokeUser('${u.id}')" title="Revoke"><i class="fas fa-ban"></i></button>
         `;
       }
-      statusActions += `<button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>`;
+      statusActions += `<button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>`;
     } else if (u.status === 'suspended') {
       statusActions = `
         <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u.id}')" title="Reactivate"><i class="fas fa-play"></i> Reactivate</button>
-        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+        <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
       `;
     } else if (u.status === 'revoked') {
       statusActions = `
         <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u.id}')" title="Reactivate"><i class="fas fa-undo"></i> Reactivate</button>
-        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+        <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
       `;
     }
     let actions = statusActions;
 
     return `
       <div class="admin-product-item">
-        <div class="admin-no-img" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:50%;background:var(--accent-light);color:var(--accent);flex-shrink:0;">
+        <div class="admin-user-avatar">
           <i class="fas fa-user"></i>
         </div>
         <div class="admin-product-info">
-          <div class="admin-product-name">${escapeHtml(u.name)} ${u.role === 'admin' ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:99px;">ADMIN</span>' : ''}</div>
-          <div class="admin-product-meta">${escapeHtml(u.email)} · ${statusBadge} · ${u.verified ? '<i class="fas fa-check-circle" style="color:#30d158;"></i> Verified' : '<i class="fas fa-times-circle" style="color:#ff453a;"></i> Unverified'} · Joined ${new Date(u.createdAt).toLocaleDateString()}</div>
+          <div class="admin-product-name">${escapeHtml(u.name)} ${u.role === 'admin' ? '<span class="admin-role-badge">ADMIN</span>' : ''}</div>
+          <div class="admin-product-meta">${escapeHtml(u.email)} · ${statusBadge} · ${u.verified ? '<i class="fas fa-check-circle admin-icon-verified"></i> Verified' : '<i class="fas fa-times-circle admin-icon-unverified"></i> Unverified'} · Joined ${new Date(u.createdAt).toLocaleDateString()}</div>
           <div class="admin-product-meta">Orders: ${u.orderCount} · Total Spent: GH₵ ${(u.totalSpent || 0).toLocaleString()}</div>
         </div>
         <div class="admin-product-actions">
@@ -883,7 +883,6 @@ async function renderUserOrders() {
 
 /* ───── Orders ───── */
 
-const statusColors = { pending: '#ff9f0a', confirmed: '#0071e3', delivered: '#30d158', cancelled: '#ff453a' };
 
 async function renderAllOrders() {
   const container = document.getElementById('orders-list-admin');
@@ -898,23 +897,23 @@ async function renderAllOrders() {
   }
 
   container.innerHTML = orders.map(order => `
-    <div class="admin-product-item" style="flex-direction:column;align-items:stretch;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div class="admin-product-item admin-order-col">
+      <div class="admin-order-header">
         <div>
-          <div class="admin-product-name">${escapeHtml(order.orderRef)} <span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;background:${statusColors[order.status] || '#86868b'}20;color:${statusColors[order.status] || '#86868b'};">${order.status}</span></div>
+          <div class="admin-product-name">${escapeHtml(order.orderRef)} <span class="admin-badge-${order.status}">${order.status}</span></div>
           <div class="admin-product-meta">${order.User ? escapeHtml(order.User.name) : 'Unknown'} · ${order.User ? escapeHtml(order.User.email) : ''} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div class="admin-order-actions">
           <select class="admin-order-status-select" onchange="updateOrderStatus('${order.id}', this.value)">
             <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
             <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
             <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
             <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
           </select>
-          <span style="font-weight:700;font-size:13px;">GH₵ ${(order.total || 0).toLocaleString()}</span>
+          <span class="admin-order-total">GH₵ ${(order.total || 0).toLocaleString()}</span>
         </div>
       </div>
-      <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+      <div class="admin-order-items">
         ${order.items.map(item => `${escapeHtml(item.name)} x${item.qty}`).join(', ')}
       </div>
     </div>
@@ -1091,13 +1090,13 @@ async function renderAdmins() {
     const currentEmail = userData.email || '';
 
     let html = `
-      <div style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <div class="admin-mgmt-bar">
         <button class="admin-btn admin-btn-primary" onclick="showCreateAdminModal()"><i class="fas fa-plus"></i> Add Admin</button>
       </div>
     `;
 
     if (!admins || admins.length === 0) {
-      html += '<div class="empty-state"><i class="fas fa-user-shield" style="font-size:48px;color:var(--text-tertiary);margin-bottom:12px;display:block;"></i><p style="color:var(--text-secondary);">No admins found.</p></div>';
+      html += '<div class="empty-state"><i class="fas fa-user-shield admin-empty-icon"></i><p class="text-muted">No admins found.</p></div>';
     } else {
       admins.forEach(admin => {
         const isSelf = admin.email === currentEmail;
@@ -1111,20 +1110,20 @@ async function renderAdmins() {
 
         html += `
           <div class="admin-user-item">
-            <div class="admin-product-info" style="flex:1;">
+            <div class="admin-product-info">
               <div class="admin-product-name">
                 ${escapeHtml(admin.name)} ${badge}
-                ${isSelf ? '<span class="admin-meta-badge" style="background:var(--accent-light);color:var(--accent);">You</span>' : ''}
+                ${isSelf ? '<span class="admin-meta-badge you-badge">You</span>' : ''}
               </div>
               <div class="admin-product-meta">${escapeHtml(admin.email)}</div>
-              <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${permChips}</div>
-              <div class="admin-product-meta" style="margin-top:6px;">Created ${new Date(admin.createdAt).toLocaleDateString()}</div>
+              <div class="admin-perm-list">${permChips}</div>
+              <div class="admin-product-meta admin-meta-mt6">Created ${new Date(admin.createdAt).toLocaleDateString()}</div>
             </div>
             <div class="admin-product-actions">
               ${!admin.isSuperAdmin
                 ? `<button class="admin-btn-sm admin-btn-primary" onclick="showEditAdminModal('${admin.id}')" title="Edit permissions"><i class="fas fa-edit"></i></button>
                    <button class="admin-btn-sm admin-btn-danger" onclick="deleteAdmin('${admin.id}')" title="Remove admin"><i class="fas fa-trash"></i></button>`
-                : '<span style="font-size:12px;color:var(--text-tertiary);">Full access</span>'
+                : '<span class="admin-full-access">Full access</span>'
               }
             </div>
           </div>
@@ -1134,7 +1133,7 @@ async function renderAdmins() {
 
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = `<div class="empty-state"><p style="color:var(--danger);">Failed to load admins.</p></div>`;
+    container.innerHTML = `<div class="empty-state"><p class="text-danger">Failed to load admins.</p></div>`;
   }
 }
 
@@ -1221,28 +1220,28 @@ function skeletonCards(count) {
 
 function skeletonUoCards(count) {
   return Array(count).fill(`
-    <div style="padding:20px;border:1px solid var(--border);border-radius:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div class="skeleton-card-uo">
+      <div class="skeleton-card-uo-header">
         <div class="skeleton skeleton-avatar"></div>
-        <div style="flex:1">
-          <div class="skeleton skeleton-line" style="width:50%"></div>
-          <div class="skeleton skeleton-line-sm" style="width:30%"></div>
+        <div class="skeleton-card-uo-body">
+          <div class="skeleton skeleton-line skel-w50"></div>
+          <div class="skeleton skeleton-line-sm skel-w30"></div>
         </div>
       </div>
-      <div class="skeleton skeleton-line" style="width:80%"></div>
-      <div class="skeleton skeleton-line-sm" style="width:40%"></div>
+      <div class="skeleton skeleton-line skel-w80"></div>
+      <div class="skeleton skeleton-line-sm skel-w40"></div>
     </div>
   `).join('');
 }
 
 function skeletonOrderCards(count) {
   return Array(count).fill(`
-    <div class="skeleton-card" style="flex-direction:column;align-items:stretch;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="flex:1"><div class="skeleton skeleton-line" style="width:40%"></div></div>
-        <div class="skeleton skeleton-btn" style="width:90px;height:30px;"></div>
+    <div class="skeleton-card skeleton-card-col">
+      <div class="skeleton-card-header">
+        <div class="skeleton-card-fill"><div class="skeleton skeleton-line skel-w40"></div></div>
+        <div class="skeleton skeleton-btn"></div>
       </div>
-      <div class="skeleton skeleton-line-sm" style="width:70%"></div>
+      <div class="skeleton skeleton-line-sm skel-w70"></div>
     </div>
   `).join('');
 }
