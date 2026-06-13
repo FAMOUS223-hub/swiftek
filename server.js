@@ -94,41 +94,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] Resend not configured (set RESEND_API_KEY)');
   }
 
-  if (process.env.MAILERSEND_API_KEY) {
-    console.log('[EMAIL] Attempting MailerSend...');
-    try {
-      const mailerSendFrom = process.env.MAILERSEND_FROM || 'MS_trial@trial-3yxj6ljkp8zldo2r.mlsender.net';
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch('https://api.mailersend.com/v1/email', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.MAILERSEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: { email: mailerSendFrom, name: fromName },
-          to: [{ email: to }],
-          subject,
-          html
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`MailerSend ${res.status}: ${text}`);
-      }
-      console.log('[EMAIL] Sent via MailerSend to', to);
-      return;
-    } catch (err) {
-      console.error('[EMAIL] MailerSend failed:', err.message);
-      errors.push(`MailerSend: ${err.message}`);
-    }
-  } else {
-    console.log('[EMAIL] MailerSend not configured (set MAILERSEND_API_KEY)');
-  }
-
   if (process.env.BREVO_API_KEY) {
     console.log('[EMAIL] Attempting Brevo API...');
     try {
