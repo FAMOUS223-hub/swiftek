@@ -62,8 +62,6 @@
       <li><a href="index.html?cat=Wearables"><i class="fas fa-clock"></i> Wearables</a></li>
       <li><a href="index.html?cat=Cables"><i class="fas fa-link"></i> Cables</a></li>
       <li><a href="cart.html"><i class="fas fa-shopping-cart"></i> Cart</a></li>
-      <li class="auth-guest"><a href="login.html"><i class="fas fa-user"></i> Login</a></li>
-      <li class="auth-guest"><a href="signup.html"><i class="fas fa-user-plus"></i> Sign Up</a></li>
     </ul>
   </nav>
 
@@ -177,8 +175,6 @@
            <li><a href="#" onclick="event.preventDefault();openModal('delivery-modal')">Delivery Info</a></li>
           <li><a href="#" onclick="event.preventDefault();openModal('returns-modal')">Returns</a></li>
           <li><a href="#" onclick="event.preventDefault();openModal('faq-modal')">FAQ</a></li>
-          <li class="auth-guest"><a href="login.html"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-          <li class="auth-guest"><a href="signup.html"><i class="fas fa-user-plus"></i> Sign Up</a></li>
         </ul>
       </div>
       <div>
@@ -385,10 +381,5 @@
   <script src="js/data.js"></script>
   <script src="js/api.js"></script>
   <script src="js/script.js"></script>
-  <script>
-    if (localStorage.getItem('swiftek_user_token')) {
-      document.querySelectorAll('.auth-guest').forEach(el => el.style.display = 'none');
-    }
-  </script>
 </body>
 </html>

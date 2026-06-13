@@ -40,8 +40,8 @@ if (loginForm) {
         localStorage.setItem('swiftek_user_data', JSON.stringify({ ...result.user, role: result.role }));
       }
       showDashboard();
-    } catch {
-      loginError.textContent = 'Invalid email or password';
+    } catch (err) {
+      loginError.textContent = err.message || 'Invalid email or password';
       loginError.classList.remove('hidden');
       passwordInput.value = '';
     }

@@ -841,7 +841,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'No account found with this email address' });
     }
 
     if (user.status === 'suspended') {

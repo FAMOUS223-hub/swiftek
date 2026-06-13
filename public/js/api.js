@@ -34,25 +34,31 @@ async function apiGet(path) {
 }
 
 async function apiPost(path, body, skipAuth) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(skipAuth ? {} : authHeaders())
+  };
+  const hadAuth = !!headers.Authorization;
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(skipAuth ? {} : authHeaders())
-    },
+    headers,
     body: JSON.stringify(body)
   });
   if (res.status === 401) {
-    localStorage.removeItem('swiftek_admin_token');
-    localStorage.removeItem('swiftek_admin_logged_in');
-    sessionStorage.removeItem('swiftek_admin_token');
-    sessionStorage.removeItem('swiftek_admin_logged_in');
-    localStorage.removeItem('swiftek_user_token');
-    localStorage.removeItem('swiftek_user_data');
-    if (window.location.pathname.includes('admin.html')) {
-      window.location.reload();
+    if (hadAuth) {
+      localStorage.removeItem('swiftek_admin_token');
+      localStorage.removeItem('swiftek_admin_logged_in');
+      sessionStorage.removeItem('swiftek_admin_token');
+      sessionStorage.removeItem('swiftek_admin_logged_in');
+      localStorage.removeItem('swiftek_user_token');
+      localStorage.removeItem('swiftek_user_data');
+      if (window.location.pathname.includes('admin.html')) {
+        window.location.reload();
+      }
+      throw new Error('Session expired');
     }
-    throw new Error('Session expired');
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Authentication failed');
   }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
