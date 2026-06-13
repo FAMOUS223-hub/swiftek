@@ -1,13 +1,15 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const ratingSchema = new mongoose.Schema({
-  productId: { type: Number, required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  rating: { type: Number, required: true, min: 1, max: 5 },
-  review: { type: String, default: '' },
-  createdAt: { type: Date, default: Date.now }
+const Rating = sequelize.define('Rating', {
+  productId: { type: DataTypes.INTEGER, allowNull: false },
+  rating: { type: DataTypes.INTEGER, allowNull: false },
+  review: { type: DataTypes.TEXT, defaultValue: '' }
+}, {
+  timestamps: true,
+  indexes: [
+    { fields: ['productId', 'userId'], unique: true }
+  ]
 });
 
-ratingSchema.index({ productId: 1, userId: 1 }, { unique: true });
-
-module.exports = mongoose.model('Rating', ratingSchema);
+module.exports = Rating;

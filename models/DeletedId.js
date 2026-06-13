@@ -1,7 +1,10 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const deletedIdSchema = new mongoose.Schema({
-  id: { type: Number, required: true, unique: true }
-}, { timestamps: true });
+const DeletedId = sequelize.define('DeletedId', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, unique: true }
+}, {
+  timestamps: true
+});
 
-module.exports = mongoose.model('DeletedId', deletedIdSchema);
+module.exports = DeletedId;

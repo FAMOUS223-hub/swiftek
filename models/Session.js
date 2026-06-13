@@ -1,11 +1,12 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const sessionSchema = new mongoose.Schema({
-  token: { type: String, required: true, unique: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  role: { type: String, enum: ['user', 'admin'], default: 'admin' },
-  createdAt: { type: Date, default: Date.now },
-  lastUsed: { type: Date, default: Date.now }
-}, { timestamps: true });
+const Session = sequelize.define('Session', {
+  token: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+  role: { type: DataTypes.STRING(20), defaultValue: 'admin' },
+  lastUsed: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, {
+  timestamps: true
+});
 
-module.exports = mongoose.model('Session', sessionSchema);
+module.exports = Session;

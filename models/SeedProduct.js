@@ -1,16 +1,19 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const seedProductSchema = new mongoose.Schema({
-  id: { type: Number, required: true, unique: true },
-  name: String,
-  category: String,
-  brand: String,
-  family: String,
-  basePrice: Number,
-  description: String,
-  images: [String],
-  specifications: mongoose.Schema.Types.Mixed,
-  options: mongoose.Schema.Types.Mixed
-}, { timestamps: true });
+const SeedProduct = sequelize.define('SeedProduct', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, unique: true },
+  name: { type: DataTypes.STRING(255) },
+  category: { type: DataTypes.STRING(255) },
+  brand: { type: DataTypes.STRING(255) },
+  family: { type: DataTypes.STRING(255) },
+  basePrice: { type: DataTypes.FLOAT },
+  description: { type: DataTypes.TEXT },
+  images: { type: DataTypes.JSONB, defaultValue: [] },
+  specifications: { type: DataTypes.JSONB, defaultValue: {} },
+  options: { type: DataTypes.JSONB, defaultValue: {} }
+}, {
+  timestamps: true
+});
 
-module.exports = mongoose.model('SeedProduct', seedProductSchema);
+module.exports = SeedProduct;

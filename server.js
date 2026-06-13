@@ -1,9 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
+const { Op } = require('sequelize');
 
 const nodemailer = require('nodemailer');
 const { Resolver } = require('dns');
@@ -43,9 +43,9 @@ function makeSmtpConfig(host, port, secure, user, pass, servername) {
     port,
     secure,
     auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 8000
   };
   if (servername) cfg.tls = { servername };
   return cfg;
@@ -59,7 +59,6 @@ async function sendEmail({ to, subject, html }) {
 
   const errors = [];
 
-  // 1. Resend — free 100 emails/day, best deliverability even with freemail senders
   if (process.env.RESEND_API_KEY) {
     console.log('[EMAIL] Attempting Resend...');
     try {
@@ -95,7 +94,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] Resend not configured (set RESEND_API_KEY)');
   }
 
-  // 2. MailerSend API — free 3000 emails/mo, trial sender without custom domain
   if (process.env.MAILERSEND_API_KEY) {
     console.log('[EMAIL] Attempting MailerSend...');
     try {
@@ -131,7 +129,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] MailerSend not configured (set MAILERSEND_API_KEY)');
   }
 
-  // 3. Brevo (Sendinblue) API — free 300 emails/day
   if (process.env.BREVO_API_KEY) {
     console.log('[EMAIL] Attempting Brevo API...');
     try {
@@ -167,7 +164,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] Brevo not configured (set BREVO_API_KEY)');
   }
 
-  // 2. SendGrid — free 100 emails/day
   if (process.env.SENDGRID_API_KEY) {
     console.log('[EMAIL] Attempting SendGrid...');
     try {
@@ -185,7 +181,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] SendGrid not configured (set SENDGRID_API_KEY)');
   }
 
-  // 3. SMTP (any provider: Gmail, Brevo SMTP, etc.)
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const hostname = process.env.SMTP_HOST;
@@ -194,7 +189,6 @@ async function sendEmail({ to, subject, html }) {
     console.log('[EMAIL] Attempting SMTP', hostname + '...');
     const port587 = parseInt(process.env.SMTP_PORT || '587');
 
-    // Check if the host resolves at all
     try {
       const testIps = await resolveSmtpHost(hostname);
       console.log('[EMAIL] DNS resolved', hostname, '->', testIps.length ? testIps.join(',') : 'NO IPS');
@@ -220,7 +214,6 @@ async function sendEmail({ to, subject, html }) {
       }
     }
 
-    // 4. DNS resolution fallback (try each resolved IP)
     const ips = await resolveSmtpHost(hostname);
     if (ips.length) {
       console.log('[EMAIL] Trying DNS fallback with', ips.length, 'IPs...');
@@ -262,44 +255,46 @@ function escapeHtml(text) {
   });
 }
 
-const SeedProduct = require('./models/SeedProduct');
-const AdminProduct = require('./models/AdminProduct');
-const DeletedId = require('./models/DeletedId');
-const TrashItem = require('./models/TrashItem');
-const Session = require('./models/Session');
-const Config = require('./models/Config');
-const User = require('./models/User');
-const Order = require('./models/Order');
-const EmailVerification = require('./models/EmailVerification');
-const Rating = require('./models/Rating');
-const Comment = require('./models/Comment');
+const {
+  sequelize,
+  SeedProduct,
+  AdminProduct,
+  DeletedId,
+  TrashItem,
+  Session,
+  Config,
+  User,
+  Order,
+  EmailVerification,
+  Rating,
+  Comment
+} = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 async function seedProducts() {
-  const count = await SeedProduct.countDocuments();
+  const count = await SeedProduct.count();
   if (count > 0) return;
 
   const raw = fs.readFileSync(path.join(__dirname, 'data', 'products.json'), 'utf8');
   const products = JSON.parse(raw);
-  await SeedProduct.insertMany(products);
+  await SeedProduct.bulkCreate(products);
   console.log(`Seeded ${products.length} products`);
 }
 
 async function ensureConfig() {
-  const exists = await Config.findOne({ key: 'passwordHash' });
+  const exists = await Config.findOne({ where: { key: 'passwordHash' } });
   if (!exists) {
     await Config.create({ key: 'passwordHash', value: crypto.createHash('sha256').update('admin').digest('hex') });
   }
 }
 
 async function ensureAdminUser() {
-  const admin = await User.findOne({ role: 'admin' });
+  const admin = await User.findOne({ where: { role: 'admin' } });
   if (!admin) {
     await User.create({
       name: 'Admin',
@@ -321,9 +316,9 @@ async function ensureAdminUser() {
 
 async function getStoreProducts() {
   const [seedProducts, adminProducts, deletedDocs] = await Promise.all([
-    SeedProduct.find().lean(),
-    AdminProduct.find().lean(),
-    DeletedId.find().lean()
+    SeedProduct.findAll({ raw: true }),
+    AdminProduct.findAll({ raw: true }),
+    DeletedId.findAll({ raw: true })
   ]);
 
   const deletedSet = new Set(deletedDocs.map(d => d.id));
@@ -353,8 +348,6 @@ app.get('/api/products/:id', async (req, res) => {
   res.json(product);
 });
 
-// ───── Ratings ─────
-
 app.post('/api/products/:id/ratings', requireAuth, async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
@@ -363,12 +356,12 @@ app.post('/api/products/:id/ratings', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
 
-    const existing = await Rating.findOne({ productId, userId: req.userId });
+    const existing = await Rating.findOne({ where: { productId, userId: req.userId } });
     if (existing) {
       existing.rating = rating;
       if (review !== undefined) existing.review = review;
       await existing.save();
-      return res.json({ success: true, rating: existing });
+      return res.json({ success: true, rating: existing.toJSON() });
     }
 
     const newRating = await Rating.create({
@@ -378,7 +371,7 @@ app.post('/api/products/:id/ratings', requireAuth, async (req, res) => {
       review: review || ''
     });
 
-    res.json({ success: true, rating: newRating });
+    res.json({ success: true, rating: newRating.toJSON() });
   } catch (err) {
     console.error('[RATING ERROR]', err.message);
     res.status(500).json({ error: 'Failed to submit rating' });
@@ -388,24 +381,31 @@ app.post('/api/products/:id/ratings', requireAuth, async (req, res) => {
 app.get('/api/products/:id/ratings', async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const ratings = await Rating.find({ productId }).populate('userId', 'name').sort({ createdAt: -1 }).lean();
-    const stats = await Rating.aggregate([
-      { $match: { productId } },
-      { $group: { _id: null, average: { $avg: '$rating' }, count: { $sum: 1 } } }
-    ]);
+    const ratings = await Rating.findAll({
+      where: { productId },
+      include: { model: User, attributes: ['name'] },
+      order: [['createdAt', 'DESC']]
+    });
+
+    const avgResult = await Rating.findOne({
+      where: { productId },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'average'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      raw: true
+    });
 
     res.json({
-      ratings,
-      average: stats.length ? Math.round(stats[0].average * 10) / 10 : 0,
-      count: stats.length ? stats[0].count : 0
+      ratings: ratings.map(r => r.toJSON()),
+      average: avgResult.average ? Math.round(parseFloat(avgResult.average) * 10) / 10 : 0,
+      count: parseInt(avgResult.count) || 0
     });
   } catch (err) {
     console.error('[RATING FETCH ERROR]', err.message);
     res.status(500).json({ error: 'Failed to fetch ratings' });
   }
 });
-
-// ───── Comments ─────
 
 app.post('/api/products/:id/comments', requireAuth, async (req, res) => {
   try {
@@ -421,8 +421,11 @@ app.post('/api/products/:id/comments', requireAuth, async (req, res) => {
       text: text.trim()
     });
 
-    const populated = await Comment.findById(comment._id).populate('userId', 'name').lean();
-    res.json({ success: true, comment: populated });
+    const populated = await Comment.findByPk(comment.id, {
+      include: { model: User, attributes: ['name'] }
+    });
+
+    res.json({ success: true, comment: populated.toJSON() });
   } catch (err) {
     console.error('[COMMENT ERROR]', err.message);
     res.status(500).json({ error: 'Failed to add comment' });
@@ -432,11 +435,12 @@ app.post('/api/products/:id/comments', requireAuth, async (req, res) => {
 app.get('/api/products/:id/comments', async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const comments = await Comment.find({ productId })
-      .populate('userId', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
-    res.json({ comments });
+    const comments = await Comment.findAll({
+      where: { productId },
+      include: { model: User, attributes: ['name'] },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ comments: comments.map(c => c.toJSON()) });
   } catch (err) {
     console.error('[COMMENT FETCH ERROR]', err.message);
     res.status(500).json({ error: 'Failed to fetch comments' });
@@ -445,9 +449,9 @@ app.get('/api/products/:id/comments', async (req, res) => {
 
 app.get('/api/stats', async (req, res) => {
   const [adminProducts, trash, deleted] = await Promise.all([
-    AdminProduct.find({ _adminCreated: true }).lean(),
-    TrashItem.find().lean(),
-    DeletedId.find().lean()
+    AdminProduct.findAll({ where: { _adminCreated: true }, raw: true }),
+    TrashItem.findAll({ raw: true }),
+    DeletedId.findAll({ raw: true })
   ]);
   res.json({
     total: (await getStoreProducts()).length,
@@ -456,8 +460,6 @@ app.get('/api/stats', async (req, res) => {
     deletedCount: deleted.length
   });
 });
-
-// ───── Auth helpers ─────
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -468,7 +470,7 @@ async function requireAuth(req, res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) return res.status(401).json({ error: 'Authentication required' });
 
-  const session = await Session.findOne({ token });
+  const session = await Session.findOne({ where: { token } });
   if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
 
   session.lastUsed = new Date();
@@ -482,7 +484,7 @@ async function requireAuth(req, res, next) {
 async function requireAdmin(req, res, next) {
   await requireAuth(req, res, async () => {
     if (req.userRole !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-    const user = await User.findById(req.userId).select('isSuperAdmin permissions role').lean();
+    const user = await User.findByPk(req.userId, { attributes: ['isSuperAdmin', 'permissions', 'role'] });
     if (!user) return res.status(403).json({ error: 'Admin not found' });
     req.adminUser = user;
     next();
@@ -496,8 +498,6 @@ async function requireSuperAdmin(req, res, next) {
   });
 }
 
-// ───── User Auth routes ─────
-
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -509,7 +509,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const normalized = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: normalized });
+    const existing = await User.findOne({ where: { email: normalized } });
     if (existing) {
       return res.status(400).json({ error: 'An account with this email already exists' });
     }
@@ -524,13 +524,12 @@ app.post('/api/auth/register', async (req, res) => {
     const token = generateToken();
     await Session.create({
       token,
-      userId: user._id,
+      userId: user.id,
       role: user.role,
-      createdAt: new Date(),
       lastUsed: new Date()
     });
 
-    const userData = { id: user._id, name: user.name, email: user.email, role: user.role, isSuperAdmin: false };
+    const userData = { id: user.id, name: user.name, email: user.email, role: user.role, isSuperAdmin: false };
     console.log('[REGISTER] User created and auto-logged in:', user.email);
     res.json({
       success: true,
@@ -549,7 +548,7 @@ app.post('/api/auth/check-email', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     res.json({ available: !existing });
   } catch (err) {
     res.status(500).json({ available: false, error: 'Check failed' });
@@ -562,12 +561,15 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const normalized = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: normalized });
+    const existing = await User.findOne({ where: { email: normalized } });
     if (existing) {
       return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
-    const recent = await EmailVerification.findOne({ email: normalized }).sort({ sentAt: -1 });
+    const recent = await EmailVerification.findOne({
+      where: { email: normalized },
+      order: [['sentAt', 'DESC']]
+    });
     if (recent && (Date.now() - new Date(recent.sentAt).getTime()) < 60000) {
       const remaining = Math.ceil((60000 - (Date.now() - new Date(recent.sentAt).getTime())) / 1000);
       return res.status(429).json({ error: `Please wait ${remaining}s before requesting a new OTP.` });
@@ -575,7 +577,7 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 600000);
-    await EmailVerification.deleteMany({ email: normalized });
+    await EmailVerification.destroy({ where: { email: normalized } });
     await EmailVerification.create({
       email: normalized,
       otp,
@@ -693,7 +695,7 @@ app.post('/api/auth/check-signup-otp', async (req, res) => {
     if (!email || !otp) return res.status(400).json({ valid: false, error: 'Email and OTP are required' });
 
     const normalized = email.toLowerCase().trim();
-    const record = await EmailVerification.findOne({ email: normalized });
+    const record = await EmailVerification.findOne({ where: { email: normalized } });
 
     if (!record) {
       return res.json({ valid: false, error: 'No OTP request found. Please request a new one.' });
@@ -731,7 +733,7 @@ app.post('/api/auth/complete-signup', async (req, res) => {
     }
 
     const normalized = email.toLowerCase().trim();
-    const record = await EmailVerification.findOne({ email: normalized });
+    const record = await EmailVerification.findOne({ where: { email: normalized } });
 
     if (!record) {
       return res.status(400).json({ error: 'No OTP request found. Please request a new OTP.' });
@@ -740,11 +742,11 @@ app.post('/api/auth/complete-signup', async (req, res) => {
       return res.status(400).json({ error: 'This email has already been verified.' });
     }
     if (new Date() > record.expiresAt) {
-      await EmailVerification.deleteOne({ _id: record._id });
+      await EmailVerification.destroy({ where: { id: record.id } });
       return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
     }
     if (record.attempts >= 5) {
-      await EmailVerification.deleteOne({ _id: record._id });
+      await EmailVerification.destroy({ where: { id: record.id } });
       return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
     }
     if (record.otp !== otp) {
@@ -753,9 +755,9 @@ app.post('/api/auth/complete-signup', async (req, res) => {
       return res.status(400).json({ error: 'Invalid OTP. Please check and try again.' });
     }
 
-    const existing = await User.findOne({ email: normalized });
+    const existing = await User.findOne({ where: { email: normalized } });
     if (existing) {
-      await EmailVerification.deleteOne({ _id: record._id });
+      await EmailVerification.destroy({ where: { id: record.id } });
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
@@ -766,14 +768,13 @@ app.post('/api/auth/complete-signup', async (req, res) => {
       verified: true
     });
 
-    await EmailVerification.deleteOne({ _id: record._id });
+    await EmailVerification.destroy({ where: { id: record.id } });
 
     const token = generateToken();
     await Session.create({
       token,
-      userId: user._id,
+      userId: user.id,
       role: user.role,
-      createdAt: new Date(),
       lastUsed: new Date()
     });
 
@@ -783,11 +784,11 @@ app.post('/api/auth/complete-signup', async (req, res) => {
       message: 'Account created successfully!',
       token,
       role: user.role,
-      user: { id: user._id, name: user.name, email: user.email, isSuperAdmin: false }
+      user: { id: user.id, name: user.name, email: user.email, isSuperAdmin: false }
     });
   } catch (err) {
     console.error('[COMPLETE-SIGNUP ERROR]', err.message);
-    if (err.code === 11000) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
     res.status(500).json({ error: 'Failed to create account' });
@@ -796,7 +797,7 @@ app.post('/api/auth/complete-signup', async (req, res) => {
 
 app.get('/api/auth/verify/:token', async (req, res) => {
   try {
-    const user = await User.findOne({ verificationToken: req.params.token });
+    const user = await User.findOne({ where: { verificationToken: req.params.token } });
     if (!user) {
       return res.status(400).send(`
         <html><head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7">
@@ -834,7 +835,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -859,9 +860,8 @@ app.post('/api/auth/login', async (req, res) => {
     const token = generateToken();
     await Session.create({
       token,
-      userId: user._id,
+      userId: user.id,
       role: user.role,
-      createdAt: new Date(),
       lastUsed: new Date()
     });
 
@@ -869,7 +869,7 @@ app.post('/api/auth/login', async (req, res) => {
       success: true,
       token,
       role: user.role,
-      user: { id: user._id, name: user.name, email: user.email, isSuperAdmin: user.isSuperAdmin || false }
+      user: { id: user.id, name: user.name, email: user.email, isSuperAdmin: user.isSuperAdmin || false }
     });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
@@ -879,7 +879,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', async (req, res) => {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  await Session.deleteOne({ token });
+  await Session.destroy({ where: { token } });
   res.json({ success: true });
 });
 
@@ -888,7 +888,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
       return res.json({ success: true, message: 'If that email exists, an OTP has been sent.' });
     }
@@ -1021,7 +1021,7 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
       return res.status(400).json({ error: 'No reset request found for this email.' });
     }
@@ -1076,8 +1076,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() }
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { [Op.gt]: new Date() }
+      }
     });
     if (!user) {
       return res.status(400).json({ error: 'Invalid or expired reset token. Please start over.' });
@@ -1088,7 +1090,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     user.resetPasswordExpires = null;
     await user.save();
 
-    await Session.deleteMany({ userId: user._id });
+    await Session.destroy({ where: { userId: user.id } });
 
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (err) {
@@ -1097,7 +1099,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {
-  const user = await User.findById(req.userId).select('name email role isSuperAdmin status verified');
+  const user = await User.findByPk(req.userId, { attributes: ['name', 'email', 'role', 'isSuperAdmin', 'status', 'verified'] });
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.status === 'suspended') {
     return res.status(403).json({ error: 'Your account has been suspended. Contact support for assistance.' });
@@ -1105,16 +1107,14 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   if (user.status === 'revoked') {
     return res.status(403).json({ error: 'Your account has been revoked. Contact support for assistance.' });
   }
-  res.json(user);
+  res.json(user.toJSON());
 });
-
-// ───── Legacy Admin Auth (backward compatible) ─────
 
 app.post('/api/auth/admin-login', async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
 
-  const config = await Config.findOne({ key: 'passwordHash' });
+  const config = await Config.findOne({ where: { key: 'passwordHash' } });
   const hash = crypto.createHash('sha256').update(password).digest('hex');
   if (hash !== config.value) {
     return res.status(401).json({ error: 'Invalid password' });
@@ -1122,23 +1122,20 @@ app.post('/api/auth/admin-login', async (req, res) => {
 
   const token = generateToken();
 
-  // Associate with admin user so profile endpoints work
-  const adminUser = await User.findOne({ role: 'admin' });
+  const adminUser = await User.findOne({ where: { role: 'admin' } });
   if (adminUser) {
-    await Session.create({ token, userId: adminUser._id, role: 'admin', createdAt: new Date(), lastUsed: new Date() });
+    await Session.create({ token, userId: adminUser.id, role: 'admin', lastUsed: new Date() });
   } else {
-    await Session.create({ token, createdAt: new Date(), lastUsed: new Date() });
+    await Session.create({ token, lastUsed: new Date() });
   }
 
   res.json({ success: true, token });
 });
 
-// ───── Profile update ─────
-
 app.patch('/api/auth/profile', requireAuth, async (req, res) => {
   try {
     const { name, email, currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.userId);
+    const user = await User.findByPk(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (name !== undefined) {
@@ -1149,7 +1146,7 @@ app.patch('/api/auth/profile', requireAuth, async (req, res) => {
     if (email !== undefined) {
       const normalized = email.toLowerCase().trim();
       if (!normalized) return res.status(400).json({ error: 'Email cannot be empty' });
-      const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+      const existing = await User.findOne({ where: { email: normalized, id: { [Op.ne]: user.id } } });
       if (existing) return res.status(400).json({ error: 'Email already in use' });
       user.email = normalized;
     }
@@ -1166,15 +1163,13 @@ app.patch('/api/auth/profile', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Email already in use' });
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(400).json({ error: 'Email already in use' });
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
-
-// ───── Orders ─────
 
 app.post('/api/orders', requireAuth, async (req, res) => {
   try {
@@ -1195,7 +1190,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       status: 'pending'
     });
 
-    res.json({ success: true, orderRef: order.orderRef, orderId: order._id });
+    res.json({ success: true, orderRef: order.orderRef, orderId: order.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create order' });
   }
@@ -1203,17 +1198,21 @@ app.post('/api/orders', requireAuth, async (req, res) => {
 
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 }).lean();
+    const orders = await Order.findAll({
+      where: { userId: req.userId },
+      order: [['createdAt', 'DESC']],
+      raw: true
+    });
     if (!orders.length) return res.json([]);
 
-    const userIds = [...new Set(orders.map(o => o.userId?.toString()).filter(Boolean))];
-    const users = await User.find({ _id: { $in: userIds } }).select('name email').lean();
+    const userIds = [...new Set(orders.map(o => o.userId).filter(Boolean))];
+    const users = await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'name', 'email'], raw: true });
     const userMap = {};
-    users.forEach(u => { userMap[u._id.toString()] = u; });
+    users.forEach(u => { userMap[u.id] = u; });
 
     const result = orders.map(o => ({
       ...o,
-      user: userMap[o.userId?.toString()] || null
+      user: userMap[o.userId] || null
     }));
 
     res.json(result);
@@ -1224,12 +1223,12 @@ app.get('/api/orders', requireAuth, async (req, res) => {
 
 app.get('/api/orders/pending-count', requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('role').lean();
+    const user = await User.findByPk(req.userId, { attributes: ['role'], raw: true });
     let count;
     if (user && user.role === 'admin') {
-      count = await Order.countDocuments({ status: 'pending' });
+      count = await Order.count({ where: { status: 'pending' } });
     } else {
-      count = await Order.countDocuments({ userId: req.userId, status: 'pending' });
+      count = await Order.count({ where: { userId: req.userId, status: 'pending' } });
     }
     res.json({ count });
   } catch (err) {
@@ -1239,8 +1238,11 @@ app.get('/api/orders/pending-count', requireAuth, async (req, res) => {
 
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   try {
-    const orders = await Order.find().populate('userId', 'name email').sort({ createdAt: -1 }).lean();
-    res.json(orders);
+    const orders = await Order.findAll({
+      include: { model: User, attributes: ['name', 'email'] },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(orders.map(o => o.toJSON()));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
@@ -1254,14 +1256,16 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const order = await Order.findById(req.params.id).populate('userId', 'name email').lean();
+    const order = await Order.findByPk(req.params.id, {
+      include: { model: User, attributes: ['name', 'email'] }
+    });
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    await Order.findByIdAndUpdate(req.params.id, { status });
+    await Order.update({ status }, { where: { id: req.params.id } });
     res.json({ success: true });
 
-    if (status !== 'pending' && order.userId?.email) {
-      const user = order.userId;
+    if (status !== 'pending' && order.User?.email) {
+      const user = order.User;
       const itemsList = order.items.map(i =>
         `<tr><td class="os-item-cell">${escapeHtml(i.name)}${i.specs ? '<br><span class="os-item-specs">' + escapeHtml(i.specs) + '</span>' : ''}</td><td class="os-item-qty">x${i.qty}</td><td class="os-item-price">GH₵ ${i.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`
       ).join('');
@@ -1383,32 +1387,47 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
   }
 });
 
-// ───── Admin Users ─────
-
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   try {
-    const users = await User.find().select('-password -verificationToken').sort({ createdAt: -1 }).lean();
-    const userOrderCounts = await Order.aggregate([
-      { $group: { _id: '$userId', orderCount: { $sum: 1 }, totalSpent: { $sum: '$total' } } }
-    ]);
+    const users = await User.findAll({
+      attributes: { exclude: ['password', 'verificationToken'] },
+      order: [['createdAt', 'DESC']],
+      raw: true
+    });
+
+    const userOrderCounts = await Order.findAll({
+      attributes: [
+        'userId',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'orderCount'],
+        [sequelize.fn('SUM', sequelize.col('total')), 'totalSpent']
+      ],
+      group: ['userId'],
+      raw: true
+    });
+
     const countMap = {};
-    userOrderCounts.forEach(u => { countMap[u._id.toString()] = { orderCount: u.orderCount, totalSpent: u.totalSpent }; });
+    userOrderCounts.forEach(u => { countMap[u.userId] = { orderCount: parseInt(u.orderCount) || 0, totalSpent: parseFloat(u.totalSpent) || 0 }; });
 
     const result = users.map(u => ({
       ...u,
-      orderCount: countMap[u._id.toString()]?.orderCount || 0,
-      totalSpent: countMap[u._id.toString()]?.totalSpent || 0
+      orderCount: countMap[u.id]?.orderCount || 0,
+      totalSpent: countMap[u.id]?.totalSpent || 0
     }));
 
     res.json(result);
   } catch (err) {
+    console.error('[ADMIN USERS ERROR]', err);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
 app.get('/api/admin/users/:id/orders', requireAdmin, async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.params.id }).sort({ createdAt: -1 }).lean();
+    const orders = await Order.findAll({
+      where: { userId: req.params.id },
+      order: [['createdAt', 'DESC']],
+      raw: true
+    });
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch user orders' });
@@ -1422,7 +1441,7 @@ app.patch('/api/admin/users/:id/status', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Invalid status. Must be active, suspended, or revoked.' });
     }
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = new Date();
@@ -1443,15 +1462,15 @@ app.patch('/api/admin/users/:id/status', requireAdmin, async (req, res) => {
 
 app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (user._id.toString() === req.userId.toString()) {
+    if (user.id === req.userId) {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
-    await Order.deleteMany({ userId: user._id });
-    await User.findByIdAndDelete(user._id);
+    await Order.destroy({ where: { userId: user.id } });
+    await User.destroy({ where: { id: user.id } });
 
     res.json({ success: true, message: 'User and all associated orders deleted permanently' });
   } catch (err) {
@@ -1459,14 +1478,14 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// ───── Admin Management (super admin only) ─────
-
 app.get('/api/admin/admins', requireAdmin, async (req, res) => {
   try {
-    const admins = await User.find({ role: 'admin' })
-      .select('name email isSuperAdmin permissions status createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
+    const admins = await User.findAll({
+      where: { role: 'admin' },
+      attributes: ['id', 'name', 'email', 'isSuperAdmin', 'permissions', 'status', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      raw: true
+    });
     res.json(admins);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch admins' });
@@ -1480,7 +1499,7 @@ app.post('/api/admin/admins', requireSuperAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (existing) return res.status(400).json({ error: 'Email already in use' });
 
     const admin = await User.create({
@@ -1493,16 +1512,16 @@ app.post('/api/admin/admins', requireSuperAdmin, async (req, res) => {
       verified: true
     });
 
-    res.json({ success: true, admin: { id: admin._id, name: admin.name, email: admin.email, permissions: admin.permissions, isSuperAdmin: false } });
+    res.json({ success: true, admin: { id: admin.id, name: admin.name, email: admin.email, permissions: admin.permissions, isSuperAdmin: false } });
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Email already in use' });
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(400).json({ error: 'Email already in use' });
     res.status(500).json({ error: 'Failed to create admin' });
   }
 });
 
 app.patch('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
   try {
-    const target = await User.findById(req.params.id);
+    const target = await User.findByPk(req.params.id);
     if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Admin not found' });
 
     if (target.isSuperAdmin) {
@@ -1521,35 +1540,33 @@ app.patch('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
 
 app.delete('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
   try {
-    const target = await User.findById(req.params.id);
+    const target = await User.findByPk(req.params.id);
     if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Admin not found' });
 
     if (target.isSuperAdmin) {
       return res.status(400).json({ error: 'Cannot delete the super admin' });
     }
 
-    if (target._id.toString() === req.userId.toString()) {
+    if (target.id === req.userId) {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
-    await User.findByIdAndDelete(target._id);
+    await User.destroy({ where: { id: target.id } });
     res.json({ success: true, message: 'Admin deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete admin' });
   }
 });
 
-// ───── Auth-protected endpoints (legacy admin) ─────
-
 app.get('/api/trash', requireAuth, async (req, res) => {
-  res.json(await TrashItem.find().lean());
+  res.json(await TrashItem.findAll({ raw: true }));
 });
 
 app.delete('/api/products/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
   const [seedProduct, adminProduct] = await Promise.all([
-    SeedProduct.findOne({ id }).lean(),
-    AdminProduct.findOne({ id }).lean()
+    SeedProduct.findOne({ where: { id }, raw: true }),
+    AdminProduct.findOne({ where: { id }, raw: true })
   ]);
 
   const product = seedProduct || adminProduct;
@@ -1560,10 +1577,10 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
 
   await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: isAdminManaged });
 
-  await AdminProduct.deleteOne({ id });
+  await AdminProduct.destroy({ where: { id } });
 
   if (isStatic) {
-    const exists = await DeletedId.findOne({ id });
+    const exists = await DeletedId.findOne({ where: { id } });
     if (!exists) {
       await DeletedId.create({ id });
     }
@@ -1574,23 +1591,21 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
 
 app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
-  const item = await TrashItem.findOne({ id });
+  const item = await TrashItem.findOne({ where: { id }, raw: true });
   if (!item) return res.status(404).json({ error: 'Item not found in trash' });
 
-  await TrashItem.deleteOne({ id });
+  await TrashItem.destroy({ where: { id } });
 
   if (item._wasAdminProduct) {
-    const exists = await AdminProduct.findOne({ id });
+    const exists = await AdminProduct.findOne({ where: { id } });
     if (!exists) {
-      const restored = item.toObject();
-      delete restored._id;
-      delete restored.__v;
+      const restored = { ...item };
       delete restored._trashedAt;
       delete restored._wasAdminProduct;
       await AdminProduct.create(restored);
     }
   } else {
-    await DeletedId.deleteOne({ id });
+    await DeletedId.destroy({ where: { id } });
   }
 
   res.json({ success: true });
@@ -1598,12 +1613,12 @@ app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
 
 app.delete('/api/trash/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
-  await TrashItem.deleteOne({ id });
+  await TrashItem.destroy({ where: { id } });
   res.json({ success: true });
 });
 
 app.get('/api/admin/products', requireAuth, async (req, res) => {
-  res.json(await AdminProduct.find().lean());
+  res.json(await AdminProduct.findAll({ raw: true }));
 });
 
 app.post('/api/admin/products', requireAuth, async (req, res) => {
@@ -1611,14 +1626,14 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
   const id = data.id;
 
   if (id) {
-    const existing = await AdminProduct.findOne({ id });
+    const existing = await AdminProduct.findOne({ where: { id } });
     if (existing) {
-      await AdminProduct.updateOne({ id }, { $set: data });
+      await AdminProduct.update(data, { where: { id } });
     } else if (id < 101) {
       await AdminProduct.create({ ...data, id, _adminOverride: true });
     }
   } else {
-    const maxDoc = await AdminProduct.findOne().sort({ id: -1 }).lean();
+    const maxDoc = await AdminProduct.findOne({ order: [['id', 'DESC']], raw: true });
     const maxId = maxDoc ? Math.max(maxDoc.id, 100) : 100;
     await AdminProduct.create({ ...data, id: maxId + 1, _adminCreated: true });
   }
@@ -1628,7 +1643,7 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
 
 app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  const config = await Config.findOne({ key: 'passwordHash' });
+  const config = await Config.findOne({ where: { key: 'passwordHash' } });
 
   const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
   if (currentHash !== config.value) {
@@ -1644,12 +1659,12 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// ───── Start ─────
-
 async function start() {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB');
+    await sequelize.authenticate();
+    console.log('Connected to CockroachDB (PostgreSQL)');
+    await sequelize.sync();
+    console.log('Database tables synced');
     await seedProducts();
     await ensureConfig();
     await ensureAdminUser();

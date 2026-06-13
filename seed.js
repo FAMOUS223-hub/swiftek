@@ -1,31 +1,26 @@
-const mongoose = require('mongoose');
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const SeedProduct = require('./models/SeedProduct');
-const AdminProduct = require('./models/AdminProduct');
-const DeletedId = require('./models/DeletedId');
-const TrashItem = require('./models/TrashItem');
-const Session = require('./models/Session');
-const Config = require('./models/Config');
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/swiftek';
+const { sequelize, SeedProduct, AdminProduct, DeletedId, TrashItem, Session, Config } = require('./models');
 
 async function seed() {
-  await mongoose.connect(MONGODB_URI);
-  console.log('Connected to MongoDB');
+  await sequelize.authenticate();
+  console.log('Connected to CockroachDB');
+  await sequelize.sync();
+  console.log('Tables synced');
 
-  await SeedProduct.deleteMany({});
-  await AdminProduct.deleteMany({});
-  await DeletedId.deleteMany({});
-  await TrashItem.deleteMany({});
-  await Session.deleteMany({});
-  await Config.deleteMany({});
+  await SeedProduct.destroy({ where: {} });
+  await AdminProduct.destroy({ where: {} });
+  await DeletedId.destroy({ where: {} });
+  await TrashItem.destroy({ where: {} });
+  await Session.destroy({ where: {} });
+  await Config.destroy({ where: {} });
 
   const raw = fs.readFileSync(path.join(__dirname, 'data', 'products.json'), 'utf8');
   const products = JSON.parse(raw);
-  await SeedProduct.insertMany(products);
+  await SeedProduct.bulkCreate(products);
   console.log(`Seeded ${products.length} products`);
 
   await Config.create({
@@ -34,7 +29,7 @@ async function seed() {
   });
   console.log('Default password set to "admin"');
 
-  await mongoose.disconnect();
+  await sequelize.close();
   console.log('Done');
 }
 

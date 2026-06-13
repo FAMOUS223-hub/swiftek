@@ -1,8 +1,11 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const configSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true },
-  value: mongoose.Schema.Types.Mixed
-}, { timestamps: true });
+const Config = sequelize.define('Config', {
+  key: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+  value: { type: DataTypes.JSONB }
+}, {
+  timestamps: true
+});
 
-module.exports = mongoose.model('Config', configSchema);
+module.exports = Config;

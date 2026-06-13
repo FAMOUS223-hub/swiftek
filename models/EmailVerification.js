@@ -1,15 +1,19 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./db');
 
-const emailVerificationSchema = new mongoose.Schema({
-  email: { type: String, required: true, lowercase: true, trim: true },
-  otp: { type: String, required: true },
-  expiresAt: { type: Date, required: true },
-  sentAt: { type: Date, default: Date.now },
-  attempts: { type: Number, default: 0 },
-  verified: { type: Boolean, default: false }
+const EmailVerification = sequelize.define('EmailVerification', {
+  email: { type: DataTypes.STRING(255), allowNull: false },
+  otp: { type: DataTypes.STRING(10), allowNull: false },
+  expiresAt: { type: DataTypes.DATE, allowNull: false },
+  sentAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  attempts: { type: DataTypes.INTEGER, defaultValue: 0 },
+  verified: { type: DataTypes.BOOLEAN, defaultValue: false }
+}, {
+  timestamps: false,
+  indexes: [
+    { fields: ['email'] },
+    { fields: ['expiresAt'] }
+  ]
 });
 
-emailVerificationSchema.index({ email: 1 });
-emailVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-module.exports = mongoose.model('EmailVerification', emailVerificationSchema);
+module.exports = EmailVerification;
