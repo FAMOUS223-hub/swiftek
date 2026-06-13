@@ -658,7 +658,7 @@ async function renderRatings(productId) {
     let userRating = null;
 
     if (token && userData) {
-      userRating = data.ratings.find(r => r.userId && r.userId._id === userData.id);
+      userRating = data.ratings.find(r => r.userId && r.userId === userData.id);
     }
 
     let html = '';

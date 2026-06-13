@@ -712,20 +712,20 @@ async function renderUsers() {
     if (u.status === 'active') {
       if (u.role !== 'admin') {
         statusActions = `
-          <button class="admin-btn-sm admin-btn-outline" onclick="suspendUser('${u._id}')" title="Suspend"><i class="fas fa-pause"></i></button>
-          <button class="admin-btn-sm admin-btn-outline" onclick="revokeUser('${u._id}')" title="Revoke"><i class="fas fa-ban"></i></button>
+          <button class="admin-btn-sm admin-btn-outline" onclick="suspendUser('${u.id}')" title="Suspend"><i class="fas fa-pause"></i></button>
+          <button class="admin-btn-sm admin-btn-outline" onclick="revokeUser('${u.id}')" title="Revoke"><i class="fas fa-ban"></i></button>
         `;
       }
-      statusActions += `<button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>`;
+      statusActions += `<button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>`;
     } else if (u.status === 'suspended') {
       statusActions = `
-        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u._id}')" title="Reactivate"><i class="fas fa-play"></i> Reactivate</button>
-        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u.id}')" title="Reactivate"><i class="fas fa-play"></i> Reactivate</button>
+        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
       `;
     } else if (u.status === 'revoked') {
       statusActions = `
-        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u._id}')" title="Reactivate"><i class="fas fa-undo"></i> Reactivate</button>
-        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u._id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
+        <button class="admin-btn-sm admin-btn-outline" onclick="reactivateUser('${u.id}')" title="Reactivate"><i class="fas fa-undo"></i> Reactivate</button>
+        <button class="admin-btn-sm admin-btn-outline" style="color:#ff453a;border-color:#ff453a33;" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
       `;
     }
     let actions = statusActions;
@@ -837,7 +837,7 @@ async function renderUserOrders() {
     let ordersHtml = '';
     let confirmedOrders = [];
     try {
-      const orders = await fetchAdminUserOrders(u._id);
+      const orders = await fetchAdminUserOrders(u.id);
       confirmedOrders = (orders || []).filter(o => o.status !== 'pending');
       if (confirmedOrders.length > 0) {
         ordersHtml = confirmedOrders.map(order => `
@@ -905,7 +905,7 @@ async function renderAllOrders() {
           <div class="admin-product-meta">${order.userId ? escapeHtml(order.userId.name || 'Unknown') + ' · ' + escapeHtml(order.userId.email || '') : 'Unknown User'} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <select class="admin-order-status-select" onchange="updateOrderStatus('${order._id}', this.value)">
+          <select class="admin-order-status-select" onchange="updateOrderStatus('${order.id}', this.value)">
             <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
             <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
             <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
@@ -1122,8 +1122,8 @@ async function renderAdmins() {
             </div>
             <div class="admin-product-actions">
               ${!admin.isSuperAdmin
-                ? `<button class="admin-btn-sm admin-btn-primary" onclick="showEditAdminModal('${admin._id}')" title="Edit permissions"><i class="fas fa-edit"></i></button>
-                   <button class="admin-btn-sm admin-btn-danger" onclick="deleteAdmin('${admin._id}')" title="Remove admin"><i class="fas fa-trash"></i></button>`
+                ? `<button class="admin-btn-sm admin-btn-primary" onclick="showEditAdminModal('${admin.id}')" title="Edit permissions"><i class="fas fa-edit"></i></button>
+                   <button class="admin-btn-sm admin-btn-danger" onclick="deleteAdmin('${admin.id}')" title="Remove admin"><i class="fas fa-trash"></i></button>`
                 : '<span style="font-size:12px;color:var(--text-tertiary);">Full access</span>'
               }
             </div>
@@ -1159,7 +1159,7 @@ function showEditAdminModal(adminId) {
   document.getElementById('admin-modal').classList.remove('hidden');
 
   fetchAdmins().then(admins => {
-    const admin = admins.find(a => a._id === adminId);
+    const admin = admins.find(a => a.id === adminId);
     if (!admin) return;
     document.getElementById('admin-name').value = admin.name || '';
     document.getElementById('admin-modal-email').value = admin.email || '';

@@ -267,10 +267,6 @@ async function saveAdminProductApi(data) {
   return apiPost('/api/admin/products', data);
 }
 
-async function fetchConfig() {
-  return apiGet('/api/config');
-}
-
 // ───── Stats (public) ─────
 
 async function fetchStats() {

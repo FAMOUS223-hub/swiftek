@@ -321,10 +321,14 @@ async function getStoreProducts() {
     DeletedId.findAll({ raw: true })
   ]);
 
-  const deletedSet = new Set(deletedDocs.map(d => d.id));
-  const merged = seedProducts.filter(p => !deletedSet.has(p.id));
+  const toNum = p => ({ ...p, id: Number(p.id) });
+  const normalizedSeed = seedProducts.map(toNum);
+  const normalizedAdmin = adminProducts.map(toNum);
 
-  adminProducts.forEach(ap => {
+  const deletedSet = new Set(deletedDocs.map(d => Number(d.id)));
+  const merged = normalizedSeed.filter(p => !deletedSet.has(p.id));
+
+  normalizedAdmin.forEach(ap => {
     const idx = merged.findIndex(p => p.id === ap.id);
     if (idx >= 0) {
       merged[idx] = { ...merged[idx], ...ap };
