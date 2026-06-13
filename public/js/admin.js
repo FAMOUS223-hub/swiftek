@@ -902,7 +902,7 @@ async function renderAllOrders() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>
           <div class="admin-product-name">${escapeHtml(order.orderRef)} <span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;background:${statusColors[order.status] || '#86868b'}20;color:${statusColors[order.status] || '#86868b'};">${order.status}</span></div>
-          <div class="admin-product-meta">${order.userId ? escapeHtml(order.userId.name || 'Unknown') + ' · ' + escapeHtml(order.userId.email || '') : 'Unknown User'} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
+          <div class="admin-product-meta">${order.User ? escapeHtml(order.User.name) : 'Unknown'} · ${order.User ? escapeHtml(order.User.email) : ''} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <select class="admin-order-status-select" onchange="updateOrderStatus('${order.id}', this.value)">

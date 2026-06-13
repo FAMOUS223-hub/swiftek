@@ -1246,7 +1246,12 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
       include: { model: User, attributes: ['name', 'email'] },
       order: [['createdAt', 'DESC']]
     });
-    res.json(orders.map(o => o.toJSON()));
+    res.json(orders.map(o => {
+      const json = o.toJSON();
+      json.userName = json.User?.name || json.customerInfo?.name || 'Unknown';
+      json.userEmail = json.User?.email || json.customerInfo?.email || '';
+      return json;
+    }));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
@@ -1473,11 +1478,19 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
-    await Order.destroy({ where: { userId: user.id } });
-    await User.destroy({ where: { id: user.id } });
+    const userId = user.id;
+    await Promise.all([
+      Session.destroy({ where: { userId } }),
+      Order.destroy({ where: { userId } }),
+      Rating.destroy({ where: { userId } }),
+      Comment.destroy({ where: { userId } }),
+      EmailVerification.destroy({ where: { email: user.email } }),
+      User.destroy({ where: { id: userId } })
+    ]);
 
-    res.json({ success: true, message: 'User and all associated orders deleted permanently' });
+    res.json({ success: true, message: 'User fully deleted. They can re-register with the same details.' });
   } catch (err) {
+    console.error('[DELETE USER ERROR]', err);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
