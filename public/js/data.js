@@ -673,7 +673,7 @@ const products = [
     basePrice: 5500,
     description: "The first iPhone with MagSafe and Ceramic Shield. The 12 Pro Max offers a massive 6.7-inch display and advanced photography features like LiDAR and ProRAW.",
     images: [
-      "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-12-pro-max-1.jpg",
+      "https://i.pinimg.com/736x/8c/1b/12/8c1b1208fca4933dad3f3916cae2caee.jpg",
       "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-12-pro-max-2.jpg"
     ],
     specifications: {

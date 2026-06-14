@@ -28,12 +28,7 @@ if (loginForm) {
     e.preventDefault();
     loginError.classList.add('hidden');
     try {
-      const result = await userLoginApi(emailInput.value.trim(), passwordInput.value);
-      if (result.role !== 'admin') {
-        loginError.textContent = 'This account does not have admin access';
-        loginError.classList.remove('hidden');
-        return;
-      }
+      const result = await userLoginApi(emailInput.value.trim(), passwordInput.value, 'admin');
       localStorage.setItem('swiftek_admin_token', result.token);
       localStorage.setItem('swiftek_admin_logged_in', 'true');
       if (result.user) {

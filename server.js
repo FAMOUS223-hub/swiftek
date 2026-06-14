@@ -799,14 +799,14 @@ app.get('/api/auth/verify/:token', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, requiredRole } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
-      return res.status(401).json({ error: 'No account found with this email address' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     if (user.status === 'suspended') {
@@ -823,6 +823,10 @@ app.post('/api/auth/login', async (req, res) => {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (requiredRole && user.role !== requiredRole) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 

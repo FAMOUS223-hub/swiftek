@@ -147,8 +147,10 @@ async function checkEmailApi(email) {
   return apiPost('/api/auth/check-email', { email }, true);
 }
 
-async function userLoginApi(email, password) {
-  const result = await apiPost('/api/auth/login', { email, password }, true);
+async function userLoginApi(email, password, requiredRole) {
+  const body = { email, password };
+  if (requiredRole) body.requiredRole = requiredRole;
+  const result = await apiPost('/api/auth/login', body, true);
   if (result.token) {
     localStorage.setItem('swiftek_user_token', result.token);
     localStorage.setItem('swiftek_user_data', JSON.stringify({ ...result.user, role: result.role }));
