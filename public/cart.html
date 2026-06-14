@@ -380,6 +380,25 @@
     </div>
   </div>
 
+  <!-- Rating Modal (shown after successful order) -->
+  <div id="rating-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal modal-rating">
+      <div class="custom-modal-header">
+        <h3><i class="fas fa-star"></i> Rate Your Purchase</h3>
+        <button class="modal-close-btn" onclick="closeRatingModal()" aria-label="Close">&times;</button>
+      </div>
+      <div class="custom-modal-body rating-modal-body">
+        <p class="rating-modal-intro">How would you rate the products you ordered?</p>
+        <div id="rating-modal-items"></div>
+        <p id="rating-modal-error" class="rating-modal-error hidden"></p>
+      </div>
+      <div class="custom-modal-footer">
+        <button type="button" class="admin-btn admin-btn-outline" onclick="closeRatingModal()">Skip</button>
+        <button type="button" class="admin-btn admin-btn-primary" onclick="submitRatingModal()">Submit Ratings</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Gooey Filter for Liquid Effect -->
   <svg class="svg-sprite" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
     <defs>

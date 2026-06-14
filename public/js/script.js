@@ -215,7 +215,7 @@ function checkoutWhatsApp() {
     message += `*💳 PAYMENT*%0A`;
     message += `Pay on delivery (Cash / Mobile Money) or bank transfer.%0A%0A`;
 
-    message += `────────────────────────────────────────────%0A`;
+    message += `────  ────────────────────────────────────────%0A`;
     message += `*SwifTek Accessories* — Premium Tech Store 🇬🇭%0A`;
     message += `📞 ${WHATSAPP_NUMBER}%0A`;
     message += `Thank you for your order! 🙏`;
@@ -243,6 +243,7 @@ function checkoutWhatsApp() {
           },
           recipient: isDifferent ? { name: recipientName, address: deliveryAddress } : {}
         });
+        showRatingPopup(orderItems);
       } catch (e) {
         console.error('Failed to save order:', e);
       }
@@ -815,6 +816,83 @@ window.submitComment = async function(productId) {
     errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
   }
+};
+
+/* ───── Rating Popup (after order) ───── */
+
+let _ratingModalItems = [];
+
+function showRatingPopup(orderItems) {
+  _ratingModalItems = orderItems.map(item => ({
+    ...item,
+    rating: 0,
+    review: ''
+  }));
+
+  const container = document.getElementById('rating-modal-items');
+  if (!container) return;
+
+  container.innerHTML = _ratingModalItems.map((item, idx) => `
+    <div class="rating-modal-product">
+      <div class="rating-modal-product-info">
+        ${item.image ? `<img src="${item.image}" alt="" class="rating-modal-product-img" onerror="this.style.display='none'">` : ''}
+        <div>
+          <div class="rating-modal-product-name">${escapeHtml(item.name)}</div>
+          ${item.specs ? `<div class="rating-modal-product-specs">${escapeHtml(item.specs)}</div>` : ''}
+        </div>
+      </div>
+      <div class="rating-modal-stars" data-index="${idx}">
+        ${[1,2,3,4,5].map(s => `
+          <i class="far fa-star rating-star" data-value="${s}" onclick="clickRatingStar(${idx}, ${s})"></i>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('rating-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+window.clickRatingStar = function(itemIdx, value) {
+  _ratingModalItems[itemIdx].rating = value;
+  const stars = document.querySelectorAll(`.rating-modal-stars[data-index="${itemIdx}"] .rating-star`);
+  stars.forEach((star, i) => {
+    star.className = i < value ? 'fas fa-star rating-star active' : 'far fa-star rating-star';
+  });
+};
+
+window.closeRatingModal = function() {
+  document.getElementById('rating-modal')?.classList.add('hidden');
+  document.body.style.overflow = '';
+  _ratingModalItems = [];
+};
+
+window.submitRatingModal = async function() {
+  const errorEl = document.getElementById('rating-modal-error');
+  const ratedItems = _ratingModalItems.filter(item => item.rating > 0);
+
+  if (ratedItems.length === 0) {
+    errorEl.textContent = 'Please rate at least one product';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  errorEl.classList.add('hidden');
+
+  let successCount = 0;
+  for (const item of ratedItems) {
+    try {
+      await submitRatingApi(item.productId, item.rating, item.review);
+      successCount++;
+    } catch (e) {
+      console.error('Failed to submit rating for', item.name, e);
+    }
+  }
+
+  if (successCount > 0) {
+    showToast(`Thanks for rating ${successCount} product${successCount > 1 ? 's' : ''}!`);
+  }
+  closeRatingModal();
 };
 
 function initSearch() {
