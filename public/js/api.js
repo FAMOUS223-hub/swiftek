@@ -247,6 +247,10 @@ async function bulkUserActionApi(userIds, action, deleteOrders) {
   return apiPost('/api/admin/users/bulk', { userIds, action, deleteOrders });
 }
 
+async function bulkOrderActionApi(orderIds, status) {
+  return apiPost('/api/admin/orders/bulk', { orderIds, status });
+}
+
 async function fetchAdminOrders(date) {
   const params = new URLSearchParams();
   if (date) params.set('date', date);

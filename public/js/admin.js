@@ -1071,17 +1071,10 @@ async function bulkOrderStatus(status) {
   const ok = await showModal({ title: `Bulk Mark ${label}`, message: `Mark <strong>${ids.length}</strong> order(s) as <strong>${status}</strong>?`, confirmText: `Mark ${label}`, cancelText: 'Cancel', type: 'confirm' });
   if (!ok) return;
   try {
-    const res = await fetch('/api/admin/orders/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderIds: ids, status })
-    });
-    const data = await res.json();
-    if (data.success) {
-      showToast(`${ids.length} order(s) marked as ${status}`);
-      fetchAndBadgeAdminOrders();
-      renderAllOrders();
-    } else throw new Error(data.error);
+    await bulkOrderActionApi(ids, status);
+    showToast(`${ids.length} order(s) marked as ${status}`);
+    fetchAndBadgeAdminOrders();
+    renderAllOrders();
   } catch (err) {
     showToast('Error: ' + err.message);
   }
