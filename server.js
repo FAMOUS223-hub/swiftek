@@ -45,11 +45,16 @@ function makeSmtpConfig(host, port, secure, user, pass, servername) {
     port,
     secure,
     auth: { user, pass },
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 8000
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000
   };
-  if (servername) cfg.tls = { servername };
+  if (secure) {
+    cfg.tls = { servername: servername || host };
+  } else {
+    cfg.requireTLS = true;
+    if (servername) cfg.tls = { servername };
+  }
   return cfg;
 }
 
@@ -153,7 +158,7 @@ async function sendEmail({ to, subject, html }) {
   const hostname = process.env.SMTP_HOST;
 
   if (hostname && user && pass) {
-    console.log('[EMAIL] Attempting SMTP', hostname + '...');
+    console.log('[EMAIL] Attempting SMTP', hostname, 'with user', user, 'on port', process.env.SMTP_PORT || '587');
     const port587 = parseInt(process.env.SMTP_PORT || '587');
 
     try {
@@ -207,7 +212,7 @@ async function sendEmail({ to, subject, html }) {
 
   throw new Error(
     'Email delivery failed. Tried:\n' + errors.join('\n') + '\n\n' +
-    'Solution: Set MAILERSEND_API_KEY or RESEND_API_KEY on Render'
+    'Check SMTP_HOST / SMTP_USER / SMTP_PASS env vars on Render'
   );
 }
 
