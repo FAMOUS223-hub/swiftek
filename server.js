@@ -289,6 +289,7 @@ async function ensureConfig() {
 }
 
 async function ensureAdminUser() {
+  const resetDone = await Config.findOne({ where: { key: 'passwordResetDone' } });
   const admin = await User.findOne({ where: { role: 'admin' } });
   if (!admin) {
     await User.create({
@@ -301,6 +302,19 @@ async function ensureAdminUser() {
       verified: true
     });
     console.log('Admin user created (admin@swiftek.com / admin)');
+    if (!resetDone) {
+      await Config.create({ key: 'passwordResetDone', value: 'true' });
+    }
+  } else if (!resetDone) {
+    const testMatch = await admin.comparePassword('admin');
+    if (!testMatch) {
+      admin.password = 'admin';
+      admin.isSuperAdmin = true;
+      admin.permissions = ['products', 'orders', 'users'];
+      await admin.save();
+      console.log('Admin password force-reset to admin (one-time)');
+    }
+    await Config.create({ key: 'passwordResetDone', value: 'true' });
   } else if (!admin.isSuperAdmin) {
     admin.isSuperAdmin = true;
     admin.permissions = ['products', 'orders', 'users'];
