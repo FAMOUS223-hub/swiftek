@@ -286,14 +286,14 @@ async function ensureAdminUser() {
   if (!admin) {
     await User.create({
       name: 'Admin',
-      email: 'admin@swiftek.com',
+      email: 'bigscany455@gmail.com',
       password: 'admin',
       role: 'admin',
       isSuperAdmin: true,
       permissions: ['products', 'orders', 'users'],
       verified: true
     });
-    console.log('Admin user created (admin@swiftek.com / admin)');
+    console.log('Admin user created (bigscany455@gmail.com / admin)');
   } else {
     admin.password = 'admin';
     admin.isSuperAdmin = true;
@@ -1601,7 +1601,7 @@ app.delete('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
 app.post('/api/admin/cleanup', requireAdmin, async (req, res) => {
   try {
     const keepEmails = [
-      'nganbewuborijaamos@gmail.com',
+      'bigscany455@gmail.com',
       'mohammedmaltiti9@gmail.com'
     ];
 
