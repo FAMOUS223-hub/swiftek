@@ -284,8 +284,7 @@ async function seedProducts() {
 async function ensureConfig() {
   const exists = await Config.findOne({ where: { key: 'passwordHash' } });
   if (!exists) {
-    const hash = crypto.createHash('sha256').update('admin123').digest('hex');
-    await Config.create({ key: 'passwordHash', value: hash });
+    await Config.create({ key: 'passwordHash', value: crypto.createHash('sha256').update('admin').digest('hex') });
   }
 }
 
@@ -295,20 +294,18 @@ async function ensureAdminUser() {
     await User.create({
       name: 'Admin',
       email: 'admin@swiftek.com',
-      password: 'admin123',
+      password: 'admin',
       role: 'admin',
       isSuperAdmin: true,
       permissions: ['products', 'orders', 'users'],
       verified: true
     });
-    console.log('Admin user created (admin@swiftek.com / admin123)');
-  } else {
-    if (!admin.isSuperAdmin || !admin.permissions || admin.permissions.length === 0) {
-      admin.isSuperAdmin = true;
-      admin.permissions = ['products', 'orders', 'users'];
-      await admin.save();
-      console.log('Existing admin promoted to super admin');
-    }
+    console.log('Admin user created (admin@swiftek.com / admin)');
+  } else if (!admin.isSuperAdmin) {
+    admin.isSuperAdmin = true;
+    admin.permissions = ['products', 'orders', 'users'];
+    await admin.save();
+    console.log('Existing admin promoted to super admin');
   }
 }
 
