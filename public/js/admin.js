@@ -157,6 +157,9 @@ async function renderAdminProducts() {
   fetchTrash().then(trash => {
     document.getElementById('stat-trash').textContent = trash.length;
   }).catch(() => {});
+  fetchAdminOrders().then(orders => {
+    document.getElementById('stat-orders').textContent = orders.length;
+  }).catch(() => {});
   updateTrashBadge();
 
   let filtered = allProducts;
