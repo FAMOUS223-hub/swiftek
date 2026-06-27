@@ -281,15 +281,7 @@ async function seedProducts() {
   console.log(`Seeded ${products.length} products`);
 }
 
-async function ensureConfig() {
-  const exists = await Config.findOne({ where: { key: 'passwordHash' } });
-  if (!exists) {
-    await Config.create({ key: 'passwordHash', value: crypto.createHash('sha256').update('admin').digest('hex') });
-  }
-}
-
 async function ensureAdminUser() {
-  await Config.destroy({ where: { key: 'passwordResetDone' } });
   const admin = await User.findOne({ where: { role: 'admin' } });
   if (!admin) {
     await User.create({
@@ -302,17 +294,12 @@ async function ensureAdminUser() {
       verified: true
     });
     console.log('Admin user created (admin@swiftek.com / admin)');
-    await Config.create({ key: 'passwordResetDone', value: 'true' });
   } else {
-    const testMatch = await admin.comparePassword('admin');
-    if (!testMatch) {
-      admin.password = 'admin';
-      admin.isSuperAdmin = true;
-      admin.permissions = ['products', 'orders', 'users'];
-      await admin.save();
-      console.log('Admin password force-reset to admin (one-time)');
-    }
-    await Config.create({ key: 'passwordResetDone', value: 'true' });
+    admin.password = 'admin';
+    admin.isSuperAdmin = true;
+    admin.permissions = ['products', 'orders', 'users'];
+    await admin.save();
+    console.log('Admin password set to admin');
   }
 }
 
@@ -1134,20 +1121,14 @@ app.post('/api/auth/admin-login', authLimiter, async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
 
-  const config = await Config.findOne({ where: { key: 'passwordHash' } });
-  const hash = crypto.createHash('sha256').update(password).digest('hex');
-  if (hash !== config.value) {
-    return res.status(401).json({ error: 'Invalid password' });
-  }
+  const adminUser = await User.findOne({ where: { role: 'admin' } });
+  if (!adminUser) return res.status(401).json({ error: 'No admin user found' });
+
+  const isMatch = await adminUser.comparePassword(password);
+  if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
 
   const token = generateToken();
-
-  const adminUser = await User.findOne({ where: { role: 'admin' } });
-  if (adminUser) {
-    await Session.create({ token, userId: adminUser.id, role: 'admin', lastUsed: new Date() });
-  } else {
-    await Session.create({ token, lastUsed: new Date() });
-  }
+  await Session.create({ token, userId: adminUser.id, role: 'admin', lastUsed: new Date() });
 
   res.json({ success: true, token });
 });
@@ -1680,19 +1661,22 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
 
 app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  const config = await Config.findOne({ where: { key: 'passwordHash' } });
-
-  const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
-  if (currentHash !== config.value) {
-    return res.status(401).json({ error: 'Current password is incorrect' });
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new password are required' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
   }
 
-  if (!newPassword || newPassword.length < 4) {
-    return res.status(400).json({ error: 'Password must be at least 4 characters' });
-  }
+  const user = await User.findByPk(req.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
 
-  config.value = crypto.createHash('sha256').update(newPassword).digest('hex');
-  await config.save();
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) return res.status(401).json({ error: 'Current password is incorrect' });
+
+  user.password = newPassword;
+  await user.save();
+
   res.json({ success: true });
 });
 
@@ -1703,7 +1687,6 @@ async function start() {
     await sequelize.sync();
     console.log('Database tables synced');
     await seedProducts();
-    await ensureConfig();
     await ensureAdminUser();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`SwifTek server running at http://0.0.0.0:${PORT}`);
