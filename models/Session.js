@@ -6,7 +6,11 @@ const Session = sequelize.define('Session', {
   role: { type: DataTypes.STRING(20), defaultValue: 'admin' },
   lastUsed: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    { fields: ['userId'] },
+    { fields: ['lastUsed'] }
+  ]
 });
 
 module.exports = Session;

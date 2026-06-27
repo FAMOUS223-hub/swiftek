@@ -8,7 +8,8 @@ const Rating = sequelize.define('Rating', {
 }, {
   timestamps: true,
   indexes: [
-    { fields: ['productId', 'userId'], unique: true }
+    { fields: ['productId', 'userId'], unique: true },
+    { fields: ['productId'] }
   ]
 });
 

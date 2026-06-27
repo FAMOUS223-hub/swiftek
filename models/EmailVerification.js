@@ -12,7 +12,8 @@ const EmailVerification = sequelize.define('EmailVerification', {
   timestamps: false,
   indexes: [
     { fields: ['email'] },
-    { fields: ['expiresAt'] }
+    { fields: ['expiresAt'] },
+    { fields: ['sentAt'] }
   ]
 });
 

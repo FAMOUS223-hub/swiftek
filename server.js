@@ -3,6 +3,8 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const { Op } = require('sequelize');
 
 const nodemailer = require('nodemailer');
@@ -238,8 +240,36 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+app.use(compression({ level: 6, memLevel: 8 }));
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.ip
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.ip
+});
+
+app.use('/api/', generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+const productCache = { data: null, time: 0, TTL: 30000 };
+function invalidateProductCache() {
+  productCache.data = null;
+  productCache.time = 0;
+}
 
 async function seedProducts() {
   const count = await SeedProduct.count();
@@ -280,6 +310,11 @@ async function ensureAdminUser() {
 }
 
 async function getStoreProducts() {
+  const now = Date.now();
+  if (productCache.data && (now - productCache.time) < productCache.TTL) {
+    return productCache.data;
+  }
+
   const [seedProducts, adminProducts, deletedDocs] = await Promise.all([
     SeedProduct.findAll({ raw: true }),
     AdminProduct.findAll({ raw: true }),
@@ -302,6 +337,8 @@ async function getStoreProducts() {
     }
   });
 
+  productCache.data = merged;
+  productCache.time = now;
   return merged;
 }
 
@@ -442,8 +479,11 @@ async function requireAuth(req, res, next) {
   const session = await Session.findOne({ where: { token } });
   if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
 
-  session.lastUsed = new Date();
-  await session.save();
+  const now = new Date();
+  if (!session.lastUsed || (now - new Date(session.lastUsed)) > 60000) {
+    session.lastUsed = now;
+    await session.save();
+  }
   req.session = session;
   req.userId = session.userId;
   req.userRole = session.role;
@@ -467,7 +507,7 @@ async function requireSuperAdmin(req, res, next) {
   });
 }
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -513,7 +553,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/check-email', async (req, res) => {
+app.post('/api/auth/check-email', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -524,7 +564,7 @@ app.post('/api/auth/check-email', async (req, res) => {
   }
 });
 
-app.post('/api/auth/send-signup-otp', async (req, res) => {
+app.post('/api/auth/send-signup-otp', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -797,7 +837,7 @@ app.get('/api/auth/verify/:token', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password, requiredRole } = req.body;
     if (!email || !password) {
@@ -856,7 +896,7 @@ app.post('/api/auth/logout', async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/auth/forgot-password', async (req, res) => {
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -989,7 +1029,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify-reset-otp', async (req, res) => {
+app.post('/api/auth/verify-reset-otp', authLimiter, async (req, res) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
@@ -1040,7 +1080,7 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
   }
 });
 
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token) return res.status(400).json({ error: 'Reset token is required' });
@@ -1083,7 +1123,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   res.json(user.toJSON());
 });
 
-app.post('/api/auth/admin-login', async (req, res) => {
+app.post('/api/auth/admin-login', authLimiter, async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
 
@@ -1572,6 +1612,7 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
     }
   }
 
+  invalidateProductCache();
   res.json({ success: true });
 });
 
@@ -1594,12 +1635,14 @@ app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
     await DeletedId.destroy({ where: { id } });
   }
 
+  invalidateProductCache();
   res.json({ success: true });
 });
 
 app.delete('/api/trash/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
   await TrashItem.destroy({ where: { id } });
+  invalidateProductCache();
   res.json({ success: true });
 });
 
@@ -1624,6 +1667,7 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
     await AdminProduct.create({ ...data, id: maxId + 1, _adminCreated: true });
   }
 
+  invalidateProductCache();
   res.json({ success: true });
 });
 

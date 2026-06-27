@@ -9,7 +9,13 @@ const Order = sequelize.define('Order', {
   customerInfo: { type: DataTypes.JSONB, defaultValue: {} },
   recipient: { type: DataTypes.JSONB, defaultValue: {} }
 }, {
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    { fields: ['userId'] },
+    { fields: ['status'] },
+    { fields: ['userId', 'status'] },
+    { fields: ['createdAt'] }
+  ]
 });
 
 module.exports = Order;

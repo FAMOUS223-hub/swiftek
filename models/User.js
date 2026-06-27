@@ -22,13 +22,18 @@ const User = sequelize.define('User', {
   resetOtpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, {
   timestamps: true,
+  indexes: [
+    { fields: ['role'] },
+    { fields: ['status'] },
+    { fields: ['email', 'status'] }
+  ],
   hooks: {
     beforeCreate: async (user) => {
-      user.password = await bcrypt.hash(user.password, 12);
+      user.password = await bcrypt.hash(user.password, 10);
     },
     beforeUpdate: async (user) => {
       if (user.changed('password')) {
-        user.password = await bcrypt.hash(user.password, 12);
+        user.password = await bcrypt.hash(user.password, 10);
       }
     }
   }
