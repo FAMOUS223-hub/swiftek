@@ -102,8 +102,13 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
 
       try {
-        await userLoginApi(email, password, 'user');
-        window.location.href = 'index.html';
+        const result = await userLoginApi(email, password);
+        const role = result.role || '';
+        if (role === 'admin') {
+          window.location.href = 'admin.html';
+        } else {
+          window.location.href = 'index.html';
+        }
       } catch (err) {
         errorEl.textContent = err.message;
         errorEl.classList.remove('hidden');
