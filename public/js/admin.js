@@ -1002,6 +1002,7 @@ async function renderAllOrders() {
   container.innerHTML = skeletonOrderCards(4);
 
   const date = document.getElementById('allorders-date')?.value;
+  const bulkOn = document.getElementById('bulk-orders-toggle')?.checked;
 
   const orders = await fetchAdminOrders(date);
   if (orders.length === 0) {
@@ -1009,15 +1010,21 @@ async function renderAllOrders() {
     return;
   }
 
-  container.innerHTML = orders.map(order => `
+  container.innerHTML = orders.map(order => {
+    const checkbox = bulkOn
+      ? `<input type="checkbox" class="admin-user-check" data-order-id="${order.id}" onchange="updateBulkOrdersCount()">`
+      : '';
+
+    return `
     <div class="admin-product-item admin-order-col">
       <div class="admin-order-header">
+        ${checkbox}
         <div>
           <div class="admin-product-name">${escapeHtml(order.orderRef)} <span class="admin-badge-${order.status}">${order.status}</span></div>
           <div class="admin-product-meta">${order.User ? escapeHtml(order.User.name) : 'Unknown'} · ${order.User ? escapeHtml(order.User.email) : ''} · ${new Date(order.createdAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>
         </div>
         <div class="admin-order-actions">
-          <select class="admin-order-status-select" onchange="updateOrderStatus('${order.id}', this.value)">
+          <select class="admin-order-status-select" onchange="updateOrderStatus('${order.id}', this.value)" ${bulkOn ? 'disabled' : ''}>
             <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
             <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
             <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
@@ -1030,7 +1037,54 @@ async function renderAllOrders() {
         ${order.items.map(item => `${escapeHtml(item.name)} x${item.qty}`).join(', ')}
       </div>
     </div>
-  `).join('');
+  `;}).join('');
+
+  if (bulkOn) {
+    document.getElementById('bulk-orders-toolbar').classList.remove('hidden');
+  } else {
+    document.getElementById('bulk-orders-toolbar').classList.add('hidden');
+  }
+  updateBulkOrdersCount();
+}
+
+/* ───── Bulk Orders ───── */
+
+function toggleBulkOrdersMode() {
+  renderAllOrders();
+}
+
+function exitBulkOrdersMode() {
+  document.getElementById('bulk-orders-toggle').checked = false;
+  renderAllOrders();
+}
+
+function updateBulkOrdersCount() {
+  const checked = document.querySelectorAll('#orders-list-admin .admin-user-check:checked').length;
+  document.getElementById('bulk-orders-count').textContent = checked + ' selected';
+  document.querySelectorAll('#bulk-orders-toolbar .admin-btn-sm').forEach(b => b.disabled = checked === 0);
+}
+
+async function bulkOrderStatus(status) {
+  const ids = Array.from(document.querySelectorAll('#orders-list-admin .admin-user-check:checked')).map(cb => cb.dataset.orderId);
+  if (!ids.length) return;
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  const ok = await showModal({ title: `Bulk Mark ${label}`, message: `Mark <strong>${ids.length}</strong> order(s) as <strong>${status}</strong>?`, confirmText: `Mark ${label}`, cancelText: 'Cancel', type: 'confirm' });
+  if (!ok) return;
+  try {
+    const res = await fetch('/api/admin/orders/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderIds: ids, status })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`${ids.length} order(s) marked as ${status}`);
+      fetchAndBadgeAdminOrders();
+      renderAllOrders();
+    } else throw new Error(data.error);
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
 }
 
 async function updateOrderStatus(orderId, status) {

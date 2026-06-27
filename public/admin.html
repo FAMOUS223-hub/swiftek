@@ -184,6 +184,23 @@
       <div id="orders-section" class="hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-truck"></i> All Orders</h2>
         <p class="admin-section-desc">Track and manage all customer orders.</p>
+        <div class="admin-bulk-toolbar hidden" id="bulk-orders-toolbar">
+          <span class="admin-bulk-count" id="bulk-orders-count">0 selected</span>
+          <div class="admin-bulk-actions">
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkOrderStatus('pending')" disabled><i class="fas fa-clock"></i> Pending</button>
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkOrderStatus('confirmed')" disabled><i class="fas fa-check"></i> Confirmed</button>
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkOrderStatus('delivered')" disabled><i class="fas fa-check-double"></i> Delivered</button>
+            <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="bulkOrderStatus('cancelled')" disabled><i class="fas fa-times"></i> Cancelled</button>
+          </div>
+          <button class="admin-btn-sm admin-btn-danger" onclick="exitBulkOrdersMode()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-bulk-toggle-wrap">
+          <label class="admin-toggle-label">
+            <input type="checkbox" id="bulk-orders-toggle" onchange="toggleBulkOrdersMode()">
+            <span class="admin-toggle-track"><span class="admin-toggle-knob"></span></span>
+            <span class="admin-toggle-text">Multi-select</span>
+          </label>
+        </div>
         <div class="admin-date-filter">
           <label>Filter by order date:</label>
           <input type="date" class="admin-date-input" id="allorders-date">

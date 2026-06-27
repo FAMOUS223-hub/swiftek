@@ -1689,6 +1689,24 @@ app.post('/api/admin/users/bulk', requireAdmin, async (req, res) => {
   }
 });
 
+app.post('/api/admin/orders/bulk', requireAdmin, async (req, res) => {
+  try {
+    const { orderIds, status } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ error: 'orderIds array is required' });
+    }
+    if (!['pending', 'confirmed', 'delivered', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    await Order.update({ status }, { where: { id: { [Op.in]: orderIds } } });
+    res.json({ success: true, affected: orderIds.length });
+  } catch (err) {
+    console.error('[BULK ORDER ERROR]', err);
+    res.status(500).json({ error: 'Bulk operation failed' });
+  }
+});
+
 app.get('/api/trash', requireAuth, async (req, res) => {
   res.json(await TrashItem.findAll({ raw: true }));
 });
