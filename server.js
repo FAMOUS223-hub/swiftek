@@ -295,11 +295,12 @@ async function ensureAdminUser() {
   } else {
     admin = await User.findOne({ where: { role: 'admin' } });
     if (admin) {
+      admin.email = targetEmail;
       admin.password = 'admin';
       admin.isSuperAdmin = true;
       admin.permissions = ['products', 'orders', 'users'];
       await admin.save();
-      console.log('Admin password set to admin');
+      console.log(`Admin email changed to ${targetEmail} / password: admin`);
     } else {
       await User.create({
         name: 'Admin',
