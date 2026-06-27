@@ -1589,6 +1589,44 @@ app.delete('/api/admin/admins/:id', requireSuperAdmin, async (req, res) => {
   }
 });
 
+app.post('/api/admin/cleanup', requireAdmin, async (req, res) => {
+  try {
+    const keepEmails = [
+      'nganbewuborijaamos@gmail.com',
+      'mohammedmaltiti9@gmail.com'
+    ];
+
+    const usersToDelete = await User.findAll({
+      where: {
+        email: { [Op.notIn]: keepEmails },
+        role: { [Op.ne]: 'admin' }
+      },
+      attributes: ['id', 'email']
+    });
+
+    const ids = usersToDelete.map(u => u.id);
+    const emails = usersToDelete.map(u => u.email);
+
+    if (ids.length === 0) {
+      return res.json({ success: true, deleted: 0, message: 'No test users found' });
+    }
+
+    await Promise.all([
+      Session.destroy({ where: { userId: { [Op.in]: ids } } }),
+      Order.destroy({ where: { userId: { [Op.in]: ids } } }),
+      Rating.destroy({ where: { userId: { [Op.in]: ids } } }),
+      Comment.destroy({ where: { userId: { [Op.in]: ids } } }),
+      EmailVerification.destroy({ where: { email: { [Op.in]: emails } } }),
+      User.destroy({ where: { id: { [Op.in]: ids } } })
+    ]);
+
+    res.json({ success: true, deleted: ids.length, emails });
+  } catch (err) {
+    console.error('[CLEANUP ERROR]', err);
+    res.status(500).json({ error: 'Cleanup failed' });
+  }
+});
+
 app.get('/api/trash', requireAuth, async (req, res) => {
   res.json(await TrashItem.findAll({ raw: true }));
 });

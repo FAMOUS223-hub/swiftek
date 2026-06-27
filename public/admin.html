@@ -187,6 +187,12 @@
       <div id="settings-section" class="hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-cog"></i> Settings</h2>
         <p class="admin-section-desc">Manage your admin preferences.</p>
+        <div class="admin-section-card" style="margin-top:18px;background:var(--card);border:1px solid var(--border-light);border-radius:var(--radius);padding:18px;">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;"><i class="fas fa-broom"></i> Cleanup Test Data</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Delete all users and orders except the two real customer accounts and admin accounts.</p>
+          <button id="cleanup-btn" class="admin-btn admin-btn-danger" onclick="cleanupTestData()"><i class="fas fa-trash"></i> Delete Test Data</button>
+          <div id="cleanup-result" style="margin-top:10px;font-size:13px;"></div>
+        </div>
       </div>
     </div>
   </div>

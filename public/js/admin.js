@@ -1032,6 +1032,38 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
   showModal({ title: 'Settings Saved', message: 'Your profile has been updated successfully.', type: 'alert' });
 });
 
+/* ───── Cleanup ───── */
+async function cleanupTestData() {
+  const btn = document.getElementById('cleanup-btn');
+  const result = document.getElementById('cleanup-result');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+  result.textContent = '';
+
+  if (!confirm('This will permanently delete ALL users (except the two real customers and admins) and ALL of their orders, ratings, and comments. Are you sure?')) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash"></i> Delete Test Data';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/cleanup', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      result.innerHTML = `<span style="color:#30d158;font-weight:600;">Deleted ${data.deleted} test user(s).</span>`;
+      renderAdminProducts();
+      renderUsers();
+    } else {
+      result.innerHTML = `<span style="color:#ff453a;">Error: ${data.error}</span>`;
+    }
+  } catch {
+    result.innerHTML = '<span style="color:#ff453a;">Request failed. Check console.</span>';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-trash"></i> Delete Test Data';
+}
+
 /* ───── Helpers ───── */
 function escapeHtml(str) {
   if (!str) return '';
