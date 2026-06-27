@@ -168,6 +168,18 @@ async function renderAdminProducts() {
     );
   }
 
+  const prodFrom = document.getElementById('prod-from')?.value;
+  const prodTo = document.getElementById('prod-to')?.value;
+  if (prodFrom || prodTo) {
+    filtered = filtered.filter(p => {
+      if (!p.createdAt) return false;
+      const d = new Date(p.createdAt);
+      if (prodFrom && d < new Date(prodFrom)) return false;
+      if (prodTo && d > new Date(prodTo + 'T23:59:59.999Z')) return false;
+      return true;
+    });
+  }
+
   if (filtered.length === 0) {
     container.innerHTML = `<div class="admin-empty">No products match your search.</div>`;
     return;
@@ -380,7 +392,9 @@ async function renderAdminProdList() {
   const section = document.getElementById('admin-prod-section');
   if (!container || !section) return;
   container.innerHTML = skeletonCards(3);
-  const allProducts = await fetchAdminProducts();
+  const from = document.getElementById('adminprod-from')?.value;
+  const to = document.getElementById('adminprod-to')?.value;
+  const allProducts = await fetchAdminProducts(from, to);
 
   if (allProducts.length === 0) {
     section.classList.add('hidden');
@@ -820,6 +834,9 @@ async function renderUserOrders() {
   const section = document.getElementById('user-orders-section');
   if (!container || !section) return;
 
+  const from = document.getElementById('userorders-from')?.value;
+  const to = document.getElementById('userorders-to')?.value;
+
   const users = await fetchAdminUsers();
   if (users.length === 0) {
     container.innerHTML = '<div class="admin-empty">No users registered yet.</div>';
@@ -832,7 +849,7 @@ async function renderUserOrders() {
     let ordersHtml = '';
     let confirmedOrders = [];
     try {
-      const orders = await fetchAdminUserOrders(u.id);
+      const orders = await fetchAdminUserOrders(u.id, from, to);
       confirmedOrders = (orders || []).filter(o => o.status !== 'pending');
       if (confirmedOrders.length > 0) {
         ordersHtml = confirmedOrders.map(order => `
@@ -885,7 +902,10 @@ async function renderAllOrders() {
   if (!container || !section) return;
   container.innerHTML = skeletonOrderCards(4);
 
-  const orders = await fetchAdminOrders();
+  const from = document.getElementById('allorders-from')?.value;
+  const to = document.getElementById('allorders-to')?.value;
+
+  const orders = await fetchAdminOrders(from, to);
   if (orders.length === 0) {
     container.innerHTML = '<div class="admin-empty">No orders placed yet.</div>';
     return;
@@ -932,6 +952,22 @@ document.getElementById('admin-search')?.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(renderAdminProducts, 200);
 });
+
+/* ───── Date Filters ───── */
+function setupDateFilter(filterId, renderFn) {
+  const btn = document.getElementById(filterId + '-btn');
+  const clear = document.getElementById(filterId + '-clear');
+  btn?.addEventListener('click', renderFn);
+  clear?.addEventListener('click', () => {
+    document.getElementById(filterId + '-from').value = '';
+    document.getElementById(filterId + '-to').value = '';
+    renderFn();
+  });
+}
+setupDateFilter('prod-filter', renderAdminProducts);
+setupDateFilter('adminprod-filter', renderAdminProdList);
+setupDateFilter('userorders-filter', renderUserOrders);
+setupDateFilter('allorders-filter', renderAllOrders);
 
 /* ───── Settings ───── */
 

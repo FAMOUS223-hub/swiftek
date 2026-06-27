@@ -1239,7 +1239,15 @@ app.get('/api/orders/pending-count', requireAuth, async (req, res) => {
 
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   try {
+    const { from, to } = req.query;
+    const where = {};
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt[Op.gte] = new Date(from);
+      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    }
     const orders = await Order.findAll({
+      where,
       include: { model: User, attributes: ['name', 'email'] },
       order: [['createdAt', 'DESC']]
     });
@@ -1429,8 +1437,15 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/users/:id/orders', requireAdmin, async (req, res) => {
   try {
+    const { from, to } = req.query;
+    const where = { userId: req.params.id };
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt[Op.gte] = new Date(from);
+      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    }
     const orders = await Order.findAll({
-      where: { userId: req.params.id },
+      where,
       order: [['createdAt', 'DESC']],
       raw: true
     });
@@ -1635,7 +1650,18 @@ app.delete('/api/trash/:id', requireAuth, async (req, res) => {
 });
 
 app.get('/api/admin/products', requireAuth, async (req, res) => {
-  res.json(await AdminProduct.findAll({ raw: true }));
+  try {
+    const { from, to } = req.query;
+    const where = {};
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt[Op.gte] = new Date(from);
+      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    }
+    res.json(await AdminProduct.findAll({ where, raw: true }));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admin products' });
+  }
 });
 
 app.post('/api/admin/products', requireAuth, async (req, res) => {

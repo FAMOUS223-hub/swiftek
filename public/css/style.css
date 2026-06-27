@@ -2198,6 +2198,62 @@ select.admin-input { cursor: pointer; }
   transition: var(--transition);
 }
 @media (hover: hover) { .admin-product-item:hover { box-shadow: var(--shadow); } }
+
+/* Product card grid on desktop */
+#admin-product-list,
+#admin-prod-list,
+#trash-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  #admin-product-list,
+  #admin-prod-list,
+  #trash-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+#admin-product-list .admin-product-item,
+#admin-prod-list .admin-product-item,
+#trash-list .admin-product-item {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+}
+#admin-product-list .admin-product-img,
+#admin-prod-list .admin-product-img,
+#trash-list .admin-product-img {
+  width: 100%;
+  height: 180px;
+  border-radius: 0;
+}
+#admin-product-list .admin-product-img img,
+#admin-prod-list .admin-product-img img,
+#trash-list .admin-product-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#admin-product-list .admin-no-img,
+#admin-prod-list .admin-no-img,
+#trash-list .admin-no-img {
+  width: 100%;
+  height: 180px;
+  font-size: 32px;
+}
+#admin-product-list .admin-product-info,
+#admin-prod-list .admin-product-info,
+#trash-list .admin-product-info {
+  padding: 12px 14px 8px;
+}
+#admin-product-list .admin-product-actions,
+#admin-prod-list .admin-product-actions,
+#trash-list .admin-product-actions {
+  padding: 0 14px 12px;
+}
 .admin-product-img {
   width: 44px;
   height: 44px;
@@ -2765,6 +2821,39 @@ select.admin-input { cursor: pointer; }
   color: var(--text-secondary);
   font-size: 13px;
   margin-bottom: 14px;
+}
+.admin-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.admin-date-filter label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.admin-date-filter input[type="date"] {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font);
+  outline: none;
+  transition: var(--transition);
+}
+.admin-date-filter input[type="date"]:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 2px rgba(0,113,227,0.15);
+}
+.dark-theme .admin-date-filter input[type="date"] {
+  background: #1c1c1e;
+  border-color: rgba(255,255,255,0.1);
+  color: #f5f5f7;
 }
 .admin-page {
   display: flex;
