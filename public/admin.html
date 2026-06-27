@@ -147,6 +147,23 @@
       <div id="users-section" class="hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-users"></i> Users</h2>
         <p class="admin-section-desc">Manage user accounts — suspend, revoke, or delete users.</p>
+        <div class="admin-bulk-toolbar hidden" id="bulk-toolbar">
+          <span class="admin-bulk-count" id="bulk-count">0 selected</span>
+          <div class="admin-bulk-actions">
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkSuspend()" disabled><i class="fas fa-pause"></i> Suspend</button>
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkRevoke()" disabled><i class="fas fa-ban"></i> Revoke</button>
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkReactivate()" disabled><i class="fas fa-play"></i> Reactivate</button>
+            <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="bulkDelete()" disabled><i class="fas fa-trash"></i> Delete</button>
+          </div>
+          <button class="admin-btn-sm admin-btn-danger" onclick="exitBulkMode()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-bulk-toggle-wrap">
+          <label class="admin-toggle-label">
+            <input type="checkbox" id="bulk-toggle" onchange="toggleBulkMode()">
+            <span class="admin-toggle-track"><span class="admin-toggle-knob"></span></span>
+            <span class="admin-toggle-text">Multi-select</span>
+          </label>
+        </div>
         <div id="users-list" class="admin-product-list"></div>
       </div>
 

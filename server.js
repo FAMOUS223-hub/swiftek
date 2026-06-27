@@ -1493,16 +1493,25 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     }
 
     const userId = user.id;
-    await Promise.all([
+    const deleteOrders = req.query.deleteOrders !== 'false';
+
+    const tasks = [
       Session.destroy({ where: { userId } }),
-      Order.destroy({ where: { userId } }),
       Rating.destroy({ where: { userId } }),
       Comment.destroy({ where: { userId } }),
       EmailVerification.destroy({ where: { email: user.email } }),
       User.destroy({ where: { id: userId } })
-    ]);
+    ];
 
-    res.json({ success: true, message: 'User fully deleted. They can re-register with the same details.' });
+    if (deleteOrders) {
+      tasks.push(Order.destroy({ where: { userId } }));
+    } else {
+      tasks.push(Order.update({ userId: null }, { where: { userId } }));
+    }
+
+    await Promise.all(tasks);
+
+    res.json({ success: true, message: 'User fully deleted.', ordersKept: !deleteOrders });
   } catch (err) {
     console.error('[DELETE USER ERROR]', err);
     res.status(500).json({ error: 'Failed to delete user' });
@@ -1624,6 +1633,59 @@ app.post('/api/admin/cleanup', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[CLEANUP ERROR]', err);
     res.status(500).json({ error: 'Cleanup failed' });
+  }
+});
+
+app.post('/api/admin/users/bulk', requireAdmin, async (req, res) => {
+  try {
+    const { userIds, action, deleteOrders } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: 'userIds array is required' });
+    }
+    if (!['suspend', 'revoke', 'reactivate', 'delete'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    const users = await User.findAll({
+      where: {
+        id: { [Op.in]: userIds },
+        role: { [Op.ne]: 'admin' }
+      },
+      attributes: ['id', 'email']
+    });
+
+    if (users.length === 0) {
+      return res.json({ success: true, affected: 0 });
+    }
+
+    const ids = users.map(u => u.id);
+
+    if (action === 'delete') {
+      const tasks = [
+        Session.destroy({ where: { userId: { [Op.in]: ids } } }),
+        Rating.destroy({ where: { userId: { [Op.in]: ids } } }),
+        Comment.destroy({ where: { userId: { [Op.in]: ids } } }),
+        EmailVerification.destroy({ where: { email: { [Op.in]: users.map(u => u.email) } } }),
+        User.destroy({ where: { id: { [Op.in]: ids } } })
+      ];
+      if (deleteOrders !== false) {
+        tasks.push(Order.destroy({ where: { userId: { [Op.in]: ids } } }));
+      } else {
+        tasks.push(Order.update({ userId: null }, { where: { userId: { [Op.in]: ids } } }));
+      }
+      await Promise.all(tasks);
+    } else if (action === 'suspend') {
+      await User.update({ status: 'suspended' }, { where: { id: { [Op.in]: ids } } });
+    } else if (action === 'revoke') {
+      await User.update({ status: 'revoked' }, { where: { id: { [Op.in]: ids } } });
+    } else if (action === 'reactivate') {
+      await User.update({ status: 'active' }, { where: { id: { [Op.in]: ids } } });
+    }
+
+    res.json({ success: true, affected: users.length });
+  } catch (err) {
+    console.error('[BULK USER ERROR]', err);
+    res.status(500).json({ error: 'Bulk operation failed' });
   }
 });
 
@@ -1753,6 +1815,7 @@ async function start() {
     console.log('Connected to CockroachDB (PostgreSQL)');
     await sequelize.sync();
     console.log('Database tables synced');
+    await sequelize.query('ALTER TABLE "Orders" ALTER COLUMN "userId" DROP NOT NULL').catch(() => {});
     await seedProducts();
     await ensureAdminUser();
     app.listen(PORT, '0.0.0.0', () => {

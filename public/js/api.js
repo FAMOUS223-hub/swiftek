@@ -238,8 +238,13 @@ async function updateUserStatusApi(userId, status) {
   return apiPatch(`/api/admin/users/${userId}/status`, { status });
 }
 
-async function deleteUserApi(userId) {
-  return apiDelete(`/api/admin/users/${userId}`);
+async function deleteUserApi(userId, deleteOrders) {
+  const params = deleteOrders !== undefined ? `?deleteOrders=${deleteOrders}` : '';
+  return apiDelete(`/api/admin/users/${userId}${params}`);
+}
+
+async function bulkUserActionApi(userIds, action, deleteOrders) {
+  return apiPost('/api/admin/users/bulk', { userIds, action, deleteOrders });
 }
 
 async function fetchAdminOrders(date) {

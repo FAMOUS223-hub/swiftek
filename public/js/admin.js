@@ -714,7 +714,10 @@ async function renderUsers() {
     return;
   }
 
+  const bulkOn = document.getElementById('bulk-toggle')?.checked;
+
   container.innerHTML = users.map(u => {
+    const isAdmin = u.role === 'admin';
     const statusBadge = u.status === 'active'
       ? '<span class="admin-status-active">● Active</span>'
       : u.status === 'suspended'
@@ -723,7 +726,7 @@ async function renderUsers() {
 
     let statusActions = '';
     if (u.status === 'active') {
-      if (u.role !== 'admin') {
+      if (!isAdmin) {
         statusActions = `
           <button class="admin-btn-sm admin-btn-outline" onclick="suspendUser('${u.id}')" title="Suspend"><i class="fas fa-pause"></i></button>
           <button class="admin-btn-sm admin-btn-outline" onclick="revokeUser('${u.id}')" title="Revoke"><i class="fas fa-ban"></i></button>
@@ -741,15 +744,20 @@ async function renderUsers() {
         <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="deleteUserConfirm('${u.id}', '${escapeHtml(u.name)}')" title="Delete"><i class="fas fa-trash"></i></button>
       `;
     }
-    let actions = statusActions;
+    let actions = isAdmin ? statusActions : statusActions;
+
+    const checkbox = !isAdmin
+      ? `<input type="checkbox" class="admin-user-check" data-user-id="${u.id}" onchange="updateBulkCount()" ${bulkOn ? '' : 'style="display:none"'}>`
+      : '';
 
     return `
       <div class="admin-product-item">
+        ${checkbox}
         <div class="admin-user-avatar">
           <i class="fas fa-user"></i>
         </div>
         <div class="admin-product-info">
-          <div class="admin-product-name">${escapeHtml(u.name)} ${u.role === 'admin' ? '<span class="admin-role-badge">ADMIN</span>' : ''}</div>
+          <div class="admin-product-name">${escapeHtml(u.name)} ${isAdmin ? '<span class="admin-role-badge">ADMIN</span>' : ''}</div>
           <div class="admin-product-meta">${escapeHtml(u.email)} · ${statusBadge} · ${u.verified ? '<i class="fas fa-check-circle admin-icon-verified"></i> Verified' : '<i class="fas fa-times-circle admin-icon-unverified"></i> Unverified'} · Joined ${new Date(u.createdAt).toLocaleDateString()}</div>
           <div class="admin-product-meta">Orders: ${u.orderCount} · Total Spent: GH₵ ${(u.totalSpent || 0).toLocaleString()}</div>
         </div>
@@ -759,6 +767,15 @@ async function renderUsers() {
       </div>
     `;
   }).join('');
+
+  if (bulkOn) {
+    section.classList.add('admin-bulk-active');
+    document.getElementById('bulk-toolbar').classList.remove('hidden');
+  } else {
+    section.classList.remove('admin-bulk-active');
+    document.getElementById('bulk-toolbar').classList.add('hidden');
+  }
+  updateBulkCount();
 }
 
 async function suspendUser(userId) {
@@ -815,18 +832,89 @@ async function reactivateUser(userId) {
   }
 }
 
+/* ───── Bulk Mode ───── */
+
+function toggleBulkMode() {
+  renderUsers();
+}
+
+function exitBulkMode() {
+  document.getElementById('bulk-toggle').checked = false;
+  renderUsers();
+}
+
+function updateBulkCount() {
+  const checked = document.querySelectorAll('#users-list .admin-user-check:checked').length;
+  document.getElementById('bulk-count').textContent = checked + ' selected';
+  document.querySelectorAll('.admin-bulk-toolbar .admin-btn-sm').forEach(b => b.disabled = checked === 0);
+}
+
+function getSelectedUserIds() {
+  return Array.from(document.querySelectorAll('#users-list .admin-user-check:checked')).map(cb => cb.dataset.userId);
+}
+
+async function bulkSuspend() {
+  const ids = getSelectedUserIds();
+  if (!ids.length) return;
+  const ok = await showModal({ title: 'Bulk Suspend', message: `Suspend ${ids.length} user(s)? They won't be able to log in.`, confirmText: 'Suspend All', cancelText: 'Cancel', type: 'confirm' });
+  if (!ok) return;
+  try {
+    await bulkUserActionApi(ids, 'suspend');
+    showToast(`${ids.length} user(s) suspended`);
+    renderUsers();
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+
+async function bulkRevoke() {
+  const ids = getSelectedUserIds();
+  if (!ids.length) return;
+  const ok = await showModal({ title: 'Bulk Revoke', message: `Revoke ${ids.length} user(s)? This is permanent (but reversible).`, confirmText: 'Revoke All', cancelText: 'Cancel', type: 'confirm' });
+  if (!ok) return;
+  try {
+    await bulkUserActionApi(ids, 'revoke');
+    showToast(`${ids.length} user(s) revoked`);
+    renderUsers();
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+
+async function bulkReactivate() {
+  const ids = getSelectedUserIds();
+  if (!ids.length) return;
+  const ok = await showModal({ title: 'Bulk Reactivate', message: `Reactivate ${ids.length} user(s)?`, confirmText: 'Reactivate All', cancelText: 'Cancel', type: 'confirm' });
+  if (!ok) return;
+  try {
+    await bulkUserActionApi(ids, 'reactivate');
+    showToast(`${ids.length} user(s) reactivated`);
+    renderUsers();
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+
+async function bulkDelete() {
+  const ids = getSelectedUserIds();
+  if (!ids.length) return;
+  const ok = await showModal({ title: 'Bulk Delete', message: `Permanently delete ${ids.length} user(s)? This cannot be undone.`, confirmText: 'Delete All', cancelText: 'Cancel', type: 'confirm' });
+  if (!ok) return;
+  const deleteOrders = confirm('Delete their orders too?\n\nClick OK to delete orders with the users.\nClick Cancel to keep orders (they will be orphaned).');
+  try {
+    await bulkUserActionApi(ids, 'delete', deleteOrders);
+    showToast(`${ids.length} user(s) deleted`);
+    renderUsers();
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+
 async function deleteUserConfirm(userId, userName) {
   const confirmed = await showModal({
     title: 'Delete User',
-    message: `Permanently delete ${userName} and all their orders? This cannot be undone.`,
-    confirmText: 'Delete Forever',
+    message: `Permanently delete <strong>${escapeHtml(userName)}</strong> and all their data?`,
+    confirmText: 'Delete',
     cancelText: 'Cancel',
     type: 'confirm'
   });
   if (!confirmed) return;
+  const deleteOrders = confirm('Delete their orders too?\n\nClick OK to delete orders with the user.\nClick Cancel to keep orders (they will be orphaned).');
   try {
-    await deleteUserApi(userId);
-    showToast('User deleted permanently');
+    await deleteUserApi(userId, deleteOrders);
+    showToast(deleteOrders ? 'User and orders deleted' : 'User deleted, orders kept');
     renderUsers();
   } catch (err) {
     showToast('Error: ' + err.message);
