@@ -892,9 +892,16 @@ async function bulkReactivate() {
 async function bulkDelete() {
   const ids = getSelectedUserIds();
   if (!ids.length) return;
-  const ok = await showModal({ title: 'Bulk Delete', message: `Permanently delete ${ids.length} user(s)? This cannot be undone.`, confirmText: 'Delete All', cancelText: 'Cancel', type: 'confirm' });
-  if (!ok) return;
-  const deleteOrders = confirm('Delete their orders too?\n\nClick OK to delete orders with the users.\nClick Cancel to keep orders (they will be orphaned).');
+  const result = await showModal({
+    title: 'Bulk Delete',
+    message: `<p>Permanently delete <strong>${ids.length} user(s)</strong>?</p><p style="margin-top:8px;font-size:13px;color:var(--text-secondary);">What should happen to their orders?</p>`,
+    confirmText: 'Delete Orders Too',
+    cancelText: 'Cancel',
+    type: 'confirm',
+    extraBtn: { text: 'Keep Orders', value: 'keep' }
+  });
+  if (!result) return;
+  const deleteOrders = result !== 'keep';
   try {
     await bulkUserActionApi(ids, 'delete', deleteOrders);
     showToast(`${ids.length} user(s) deleted`);
@@ -903,15 +910,16 @@ async function bulkDelete() {
 }
 
 async function deleteUserConfirm(userId, userName) {
-  const confirmed = await showModal({
+  const result = await showModal({
     title: 'Delete User',
-    message: `Permanently delete <strong>${escapeHtml(userName)}</strong> and all their data?`,
-    confirmText: 'Delete',
+    message: `<p>Permanently delete <strong>${escapeHtml(userName)}</strong>?</p><p style="margin-top:8px;font-size:13px;color:var(--text-secondary);">What should happen to their orders?</p>`,
+    confirmText: 'Delete Orders Too',
     cancelText: 'Cancel',
-    type: 'confirm'
+    type: 'confirm',
+    extraBtn: { text: 'Keep Orders', value: 'keep' }
   });
-  if (!confirmed) return;
-  const deleteOrders = confirm('Delete their orders too?\n\nClick OK to delete orders with the user.\nClick Cancel to keep orders (they will be orphaned).');
+  if (!result) return;
+  const deleteOrders = result !== 'keep';
   try {
     await deleteUserApi(userId, deleteOrders);
     showToast(deleteOrders ? 'User and orders deleted' : 'User deleted, orders kept');
@@ -1176,7 +1184,7 @@ function initTheme() {
 }
 
 /* ───── Custom Modal ───── */
-function showModal({ title, message, confirmText, cancelText, type }) {
+function showModal({ title, message, confirmText, cancelText, type, extraBtn }) {
   return new Promise((resolve) => {
     const existing = document.querySelector('.custom-modal-overlay');
     if (existing) existing.remove();
@@ -1188,10 +1196,11 @@ function showModal({ title, message, confirmText, cancelText, type }) {
         <div class="custom-modal-header">
           <h3>${escapeHtml(title)}</h3>
         </div>
-        <div class="custom-modal-body">${escapeHtml(message)}</div>
+        <div class="custom-modal-body">${message}</div>
         <div class="custom-modal-footer">
           ${type === 'confirm'
-            ? `<button class="admin-btn admin-btn-outline modal-cancel">${escapeHtml(cancelText || 'Cancel')}</button>
+            ? `${extraBtn ? `<button class="admin-btn admin-btn-outline modal-extra">${escapeHtml(extraBtn.text)}</button>` : ''}
+               <button class="admin-btn admin-btn-outline modal-cancel">${escapeHtml(cancelText || 'Cancel')}</button>
                <button class="admin-btn admin-btn-primary modal-ok">${escapeHtml(confirmText || 'Yes')}</button>`
             : `<button class="admin-btn admin-btn-primary modal-ok">OK</button>`}
         </div>
@@ -1202,9 +1211,11 @@ function showModal({ title, message, confirmText, cancelText, type }) {
 
     const okBtn = overlay.querySelector('.modal-ok');
     const cancelBtn = overlay.querySelector('.modal-cancel');
+    const extra = overlay.querySelector('.modal-extra');
 
     if (okBtn) okBtn.addEventListener('click', () => { overlay.remove(); resolve(true); });
     if (cancelBtn) cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(false); });
+    if (extra) extra.addEventListener('click', () => { overlay.remove(); resolve(extraBtn.value); });
 
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) { overlay.remove(); resolve(false); }
