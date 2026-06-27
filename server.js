@@ -282,24 +282,36 @@ async function seedProducts() {
 }
 
 async function ensureAdminUser() {
-  const admin = await User.findOne({ where: { role: 'admin' } });
-  if (!admin) {
-    await User.create({
-      name: 'Admin',
-      email: 'bigscany455@gmail.com',
-      password: 'admin',
-      role: 'admin',
-      isSuperAdmin: true,
-      permissions: ['products', 'orders', 'users'],
-      verified: true
-    });
-    console.log('Admin user created (bigscany455@gmail.com / admin)');
-  } else {
-    admin.password = 'admin';
+  const targetEmail = 'bigscany455@gmail.com';
+  let admin = await User.findOne({ where: { email: targetEmail } });
+  if (admin) {
+    admin.role = 'admin';
     admin.isSuperAdmin = true;
     admin.permissions = ['products', 'orders', 'users'];
+    admin.verified = true;
+    admin.password = 'admin';
     await admin.save();
-    console.log('Admin password set to admin');
+    console.log(`Admin promoted (${targetEmail} / admin)`);
+  } else {
+    admin = await User.findOne({ where: { role: 'admin' } });
+    if (admin) {
+      admin.password = 'admin';
+      admin.isSuperAdmin = true;
+      admin.permissions = ['products', 'orders', 'users'];
+      await admin.save();
+      console.log('Admin password set to admin');
+    } else {
+      await User.create({
+        name: 'Admin',
+        email: targetEmail,
+        password: 'admin',
+        role: 'admin',
+        isSuperAdmin: true,
+        permissions: ['products', 'orders', 'users'],
+        verified: true
+      });
+      console.log(`Admin user created (${targetEmail} / admin)`);
+    }
   }
 }
 
