@@ -168,15 +168,14 @@ async function renderAdminProducts() {
     );
   }
 
-  const prodFrom = document.getElementById('prod-from')?.value;
-  const prodTo = document.getElementById('prod-to')?.value;
-  if (prodFrom || prodTo) {
+  const prodDate = document.getElementById('prod-date')?.value;
+  if (prodDate) {
+    const start = new Date(prodDate);
+    const end = new Date(prodDate + 'T23:59:59.999Z');
     filtered = filtered.filter(p => {
       if (!p.createdAt) return false;
       const d = new Date(p.createdAt);
-      if (prodFrom && d < new Date(prodFrom)) return false;
-      if (prodTo && d > new Date(prodTo + 'T23:59:59.999Z')) return false;
-      return true;
+      return d >= start && d <= end;
     });
   }
 
@@ -325,6 +324,7 @@ let currentSection = 'main';
 
 function switchSection(sectionId) {
   const list = document.getElementById('admin-product-list');
+  const listArea = document.getElementById('product-list-area');
   const search = document.getElementById('admin-search');
   const formModal = document.getElementById('product-form-modal');
 
@@ -335,6 +335,7 @@ function switchSection(sectionId) {
       if (info.panel) document.getElementById(info.panel)?.classList.add('hidden');
     });
     if (list) list.style.display = '';
+    if (listArea) listArea.style.display = '';
     document.getElementById('settings-modal')?.classList.add('hidden');
     if (formModal) formModal.classList.add('hidden');
     updateActiveButton();
@@ -352,6 +353,7 @@ function switchSection(sectionId) {
   });
 
   if (list) list.style.display = info.hidesList ? 'none' : '';
+  if (listArea) listArea.style.display = info.hidesList ? 'none' : '';
   if (info.panel) document.getElementById(info.panel)?.classList.remove('hidden');
   document.getElementById('settings-modal')?.classList.add('hidden');
   if (formModal) formModal.classList.add('hidden');
@@ -392,9 +394,8 @@ async function renderAdminProdList() {
   const section = document.getElementById('admin-prod-section');
   if (!container || !section) return;
   container.innerHTML = skeletonCards(3);
-  const from = document.getElementById('adminprod-from')?.value;
-  const to = document.getElementById('adminprod-to')?.value;
-  const allProducts = await fetchAdminProducts(from, to);
+  const date = document.getElementById('adminprod-date')?.value;
+  const allProducts = await fetchAdminProducts(date);
 
   if (allProducts.length === 0) {
     section.classList.add('hidden');
@@ -834,8 +835,7 @@ async function renderUserOrders() {
   const section = document.getElementById('user-orders-section');
   if (!container || !section) return;
 
-  const from = document.getElementById('userorders-from')?.value;
-  const to = document.getElementById('userorders-to')?.value;
+  const date = document.getElementById('userorders-date')?.value;
 
   const users = await fetchAdminUsers();
   if (users.length === 0) {
@@ -849,7 +849,7 @@ async function renderUserOrders() {
     let ordersHtml = '';
     let confirmedOrders = [];
     try {
-      const orders = await fetchAdminUserOrders(u.id, from, to);
+      const orders = await fetchAdminUserOrders(u.id, date);
       confirmedOrders = (orders || []).filter(o => o.status !== 'pending');
       if (confirmedOrders.length > 0) {
         ordersHtml = confirmedOrders.map(order => `
@@ -902,10 +902,9 @@ async function renderAllOrders() {
   if (!container || !section) return;
   container.innerHTML = skeletonOrderCards(4);
 
-  const from = document.getElementById('allorders-from')?.value;
-  const to = document.getElementById('allorders-to')?.value;
+  const date = document.getElementById('allorders-date')?.value;
 
-  const orders = await fetchAdminOrders(from, to);
+  const orders = await fetchAdminOrders(date);
   if (orders.length === 0) {
     container.innerHTML = '<div class="admin-empty">No orders placed yet.</div>';
     return;
@@ -959,13 +958,10 @@ function setupDateFilter(filterId, renderFn) {
   const clear = document.getElementById(filterId + '-clear');
   btn?.addEventListener('click', renderFn);
   clear?.addEventListener('click', () => {
-    document.getElementById(filterId + '-from').value = '';
-    document.getElementById(filterId + '-to').value = '';
+    document.getElementById(filterId + '-date').value = '';
     renderFn();
   });
 }
-setupDateFilter('prod-filter', renderAdminProducts);
-setupDateFilter('adminprod-filter', renderAdminProdList);
 setupDateFilter('userorders-filter', renderUserOrders);
 setupDateFilter('allorders-filter', renderAllOrders);
 

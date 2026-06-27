@@ -1239,12 +1239,13 @@ app.get('/api/orders/pending-count', requireAuth, async (req, res) => {
 
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { date } = req.query;
     const where = {};
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt[Op.gte] = new Date(from);
-      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    if (date) {
+      where.createdAt = {
+        [Op.gte]: new Date(date),
+        [Op.lte]: new Date(date + 'T23:59:59.999Z')
+      };
     }
     const orders = await Order.findAll({
       where,
@@ -1437,12 +1438,13 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/users/:id/orders', requireAdmin, async (req, res) => {
   try {
-    const { from, to } = req.query;
-    const where = { userId: req.params.id };
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt[Op.gte] = new Date(from);
-      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    const { date } = req.query;
+    const where = {};
+    if (date) {
+      where.createdAt = {
+        [Op.gte]: new Date(date),
+        [Op.lte]: new Date(date + 'T23:59:59.999Z')
+      };
     }
     const orders = await Order.findAll({
       where,
@@ -1651,12 +1653,13 @@ app.delete('/api/trash/:id', requireAuth, async (req, res) => {
 
 app.get('/api/admin/products', requireAuth, async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { date } = req.query;
     const where = {};
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt[Op.gte] = new Date(from);
-      if (to) where.createdAt[Op.lte] = new Date(to + 'T23:59:59.999Z');
+    if (date) {
+      where.createdAt = {
+        [Op.gte]: new Date(date),
+        [Op.lte]: new Date(date + 'T23:59:59.999Z')
+      };
     }
     res.json(await AdminProduct.findAll({ where, raw: true }));
   } catch (err) {

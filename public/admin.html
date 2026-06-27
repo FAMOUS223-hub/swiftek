@@ -121,26 +121,14 @@
       </div>
 
       <!-- Product List -->
-      <div class="admin-date-filter" id="product-date-filter">
-        <label>Filter by date created:</label>
-        <input type="date" class="admin-date-from" id="prod-from">
-        <input type="date" class="admin-date-to" id="prod-to">
-        <button class="admin-btn admin-btn-primary admin-btn-sm" id="prod-filter-btn">Filter</button>
-        <button class="admin-btn admin-btn-outline admin-btn-sm" id="prod-filter-clear">Clear</button>
+      <div id="product-list-area">
+        <div id="admin-product-list" class="admin-product-list"></div>
       </div>
-      <div id="admin-product-list" class="admin-product-list"></div>
 
       <!-- Admin Products -->
       <div id="admin-prod-section" class="admin-prod-section hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-box"></i> All Products</h2>
         <p class="admin-section-desc">Browse all products in your store inventory.</p>
-        <div class="admin-date-filter">
-          <label>Filter by date created:</label>
-          <input type="date" class="admin-date-from" id="adminprod-from">
-          <input type="date" class="admin-date-to" id="adminprod-to">
-          <button class="admin-btn admin-btn-primary admin-btn-sm" id="adminprod-filter-btn">Filter</button>
-          <button class="admin-btn admin-btn-outline admin-btn-sm" id="adminprod-filter-clear">Clear</button>
-        </div>
         <div id="admin-prod-list" class="admin-product-list"></div>
       </div>
 
@@ -164,8 +152,7 @@
         <p class="admin-section-desc">Browse orders placed by each user.</p>
         <div class="admin-date-filter">
           <label>Filter by order date:</label>
-          <input type="date" class="admin-date-from" id="userorders-from">
-          <input type="date" class="admin-date-to" id="userorders-to">
+          <input type="date" class="admin-date-input" id="userorders-date">
           <button class="admin-btn admin-btn-primary admin-btn-sm" id="userorders-filter-btn">Filter</button>
           <button class="admin-btn admin-btn-outline admin-btn-sm" id="userorders-filter-clear">Clear</button>
         </div>
@@ -178,8 +165,7 @@
         <p class="admin-section-desc">Track and manage all customer orders.</p>
         <div class="admin-date-filter">
           <label>Filter by order date:</label>
-          <input type="date" class="admin-date-from" id="allorders-from">
-          <input type="date" class="admin-date-to" id="allorders-to">
+          <input type="date" class="admin-date-input" id="allorders-date">
           <button class="admin-btn admin-btn-primary admin-btn-sm" id="allorders-filter-btn">Filter</button>
           <button class="admin-btn admin-btn-outline admin-btn-sm" id="allorders-filter-clear">Clear</button>
         </div>

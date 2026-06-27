@@ -227,10 +227,9 @@ async function fetchAdminUsers() {
   return apiGet('/api/admin/users');
 }
 
-async function fetchAdminUserOrders(userId, from, to) {
+async function fetchAdminUserOrders(userId, date) {
   const params = new URLSearchParams();
-  if (from) params.set('from', from);
-  if (to) params.set('to', to);
+  if (date) params.set('date', date);
   const qs = params.toString();
   return apiGet(`/api/admin/users/${userId}/orders` + (qs ? '?' + qs : ''));
 }
@@ -243,10 +242,9 @@ async function deleteUserApi(userId) {
   return apiDelete(`/api/admin/users/${userId}`);
 }
 
-async function fetchAdminOrders(from, to) {
+async function fetchAdminOrders(date) {
   const params = new URLSearchParams();
-  if (from) params.set('from', from);
-  if (to) params.set('to', to);
+  if (date) params.set('date', date);
   const qs = params.toString();
   return apiGet('/api/admin/orders' + (qs ? '?' + qs : ''));
 }
@@ -275,10 +273,9 @@ async function deleteForeverApi(id) {
 
 // ───── Admin Products (auth required) ─────
 
-async function fetchAdminProducts(from, to) {
+async function fetchAdminProducts(date) {
   const params = new URLSearchParams();
-  if (from) params.set('from', from);
-  if (to) params.set('to', to);
+  if (date) params.set('date', date);
   const qs = params.toString();
   return apiGet('/api/admin/products' + (qs ? '?' + qs : ''));
 }
