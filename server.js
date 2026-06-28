@@ -683,7 +683,7 @@ app.post('/api/auth/send-signup-otp', authLimiter, async (req, res) => {
       '              <p class="email-footer-text"',
       '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
       '              <p class="email-footer-link"',
-      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/23345277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233545277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
       '',
       '            </td>',
       '          </tr>',
@@ -1007,7 +1007,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
       '              <p class="email-footer-text"',
       '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
       '              <p class="email-footer-link"',
-      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/23345277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/233545277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
       '',
       '            </td>',
       '          </tr>',
@@ -1390,7 +1390,7 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
 
                       <p class="os-footer-text">SwifTek Accessories &mdash; Premium Tech Store</p>
                       <p class="os-footer-sub">Accra, Ghana &middot; Built by Famous Tech</p>
-                      <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/23345277534">WhatsApp</a></p>
+                      <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/233545277534">WhatsApp</a></p>
 
                     </td>
                   </tr>

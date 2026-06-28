@@ -90,7 +90,7 @@ const emailHtml = `<!DOCTYPE html>
               </table>
               <p class="os-footer-text">SwifTek Accessories &mdash; Premium Tech Store</p>
               <p class="os-footer-sub">Accra, Ghana &middot; Built by Famous Tech</p>
-              <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/23345277534">WhatsApp</a></p>
+              <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/233545277534">WhatsApp</a></p>
             </td>
           </tr>
         </table>

@@ -1,4 +1,4 @@
-const WHATSAPP_NUMBER = '23345277534';
+const WHATSAPP_NUMBER = '233545277534';
 let cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
 
 let _cachedProducts = null;
