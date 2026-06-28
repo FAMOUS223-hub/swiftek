@@ -60,7 +60,8 @@ function makeSmtpConfig(host, port, secure, user, pass, servername) {
 
 async function sendEmail({ to, subject, html }) {
   const fromName = 'SwifTek Accessories';
-  const rawEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@swiftek.com';
+  const DEFAULT_FROM = 'bigscany455@gmail.com';
+  const rawEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || DEFAULT_FROM;
   const fromAddr = rawEmail.includes('<') ? rawEmail.replace(/.*<(.+)>$/, '$1') : rawEmail;
   const from = rawEmail.includes('<') ? rawEmail : `${fromName} <${rawEmail}>`;
 
@@ -253,8 +254,7 @@ const authLimiter = rateLimit({
   max: 30,
   message: { error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: req => req.ip
+  legacyHeaders: false
 });
 
 const generalLimiter = rateLimit({
@@ -262,8 +262,7 @@ const generalLimiter = rateLimit({
   max: 120,
   message: { error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: req => req.ip
+  legacyHeaders: false
 });
 
 app.use('/api/', generalLimiter);
@@ -684,7 +683,7 @@ app.post('/api/auth/send-signup-otp', authLimiter, async (req, res) => {
       '              <p class="email-footer-text"',
       '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
       '              <p class="email-footer-link"',
-      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/22545277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/23345277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
       '',
       '            </td>',
       '          </tr>',
@@ -1008,7 +1007,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
       '              <p class="email-footer-text"',
       '                 style="font-size:13px;color:#8e8e93;margin:20px 0 0;line-height:1.5;">SwifTek Accessories &mdash; Premium Tech Accessories<br><span class="email-footer-sub" style="color:#aeaeb2;">Built by Famous Tech &middot; Accra, Ghana</span></p>',
       '              <p class="email-footer-link"',
-      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/22545277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
+      '                 style="font-size:12px;color:#aeaeb2;margin:12px 0 0;">Need help? <a href="https://wa.me/23345277534" style="color:#0071e3;text-decoration:none;font-weight:600;">Contact us on WhatsApp</a></p>',
       '',
       '            </td>',
       '          </tr>',
@@ -1391,7 +1390,7 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, async (req, res) => {
 
                       <p class="os-footer-text">SwifTek Accessories &mdash; Premium Tech Store</p>
                       <p class="os-footer-sub">Accra, Ghana &middot; Built by Famous Tech</p>
-                      <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/22545277534">WhatsApp</a></p>
+                      <p class="os-footer-link">Need help? Contact us on <a href="https://wa.me/23345277534">WhatsApp</a></p>
 
                     </td>
                   </tr>
