@@ -432,6 +432,60 @@ app.get('/api/products/:id/comments', async (req, res) => {
   }
 });
 
+app.get('/api/pinterest/search', async (req, res) => {
+  try {
+    const q = req.query.q;
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    }
+    const query = q.trim();
+    const url = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(query)}`;
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+      }
+    });
+    const html = await resp.text();
+
+    const results = [];
+    const seen = new Set();
+
+    // Extract Pinterest CDN image URLs from HTML
+    const imgRegex = /https?:\/\/i\.pinimg\.com\/\d+x\/([^"'\s<]+\.(?:jpg|jpeg|png|webp))/gi;
+    let match;
+    while ((match = imgRegex.exec(html)) !== null) {
+      const path = match[1];
+      if (seen.has(path)) continue;
+      seen.add(path);
+      results.push({
+        thumbnail: match[0],
+        original: `https://i.pinimg.com/originals/${path}`
+      });
+      if (results.length >= 50) break;
+    }
+
+    if (results.length === 0) {
+      // Fallback: extract from embedded JSON
+      const fallbackRegex = /"images"?\s*:\s*\{[^}]*?"originals?"?\s*:\s*\[\s*"([^"]+)"\s*\]/g;
+      let jmatch;
+      while ((jmatch = fallbackRegex.exec(html)) !== null) {
+        const url = jmatch[1];
+        if (seen.has(url)) continue;
+        seen.add(url);
+        results.push({ thumbnail: url, original: url });
+        if (results.length >= 50) break;
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error('Pinterest search error:', err.message);
+    res.status(500).json({ error: 'Failed to search Pinterest' });
+  }
+});
+
 app.get('/api/stats', async (req, res) => {
   const [adminProducts, trash] = await Promise.all([
     AdminProduct.findAll({ where: { _adminCreated: true }, raw: true }),

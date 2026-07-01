@@ -403,6 +403,17 @@
             <textarea id="field-images" name="field-images" class="admin-input hidden" rows="2"></textarea>
             <input type="file" id="field-image-upload" name="field-image-upload" accept="image/*" multiple class="admin-input">
             <div id="image-preview-container" class="admin-image-preview-container"></div>
+            <div style="margin-top:8px;">
+              <button type="button" class="admin-btn-sm admin-btn-outline" onclick="togglePinterestSearch()" id="pinterest-toggle-btn"><i class="fab fa-pinterest"></i> Search Pinterest</button>
+            </div>
+            <div id="pinterest-search-area" class="hidden" style="margin-top:8px;">
+              <div class="admin-pinterest-search-bar">
+                <input type="text" id="pinterest-search-input" class="admin-input" placeholder="Search Pinterest for product images..." autocomplete="off">
+                <span id="pinterest-search-spinner" class="hidden" style="font-size:13px;color:var(--text-secondary);"><i class="fas fa-spinner fa-spin"></i></span>
+              </div>
+              <div id="pinterest-results" class="admin-pinterest-results"></div>
+              <p id="pinterest-error" class="admin-error hidden" style="margin-top:6px;font-size:12px;"></p>
+            </div>
           </div>
 
           <div class="admin-section-label">Specifications</div>

@@ -595,6 +595,93 @@ document.getElementById('image-preview-container')?.addEventListener('click', (e
   renderImagePreviews();
 });
 
+/* ───── Pinterest Image Search ───── */
+
+let pinterestSearchOpen = false;
+
+function togglePinterestSearch() {
+  const area = document.getElementById('pinterest-search-area');
+  const btn = document.getElementById('pinterest-toggle-btn');
+  pinterestSearchOpen = !pinterestSearchOpen;
+  area.classList.toggle('hidden', !pinterestSearchOpen);
+  btn.innerHTML = pinterestSearchOpen
+    ? '<i class="fab fa-pinterest"></i> Close Pinterest Search'
+    : '<i class="fab fa-pinterest"></i> Search Pinterest';
+  if (pinterestSearchOpen) {
+    document.getElementById('pinterest-search-input').focus();
+  }
+}
+
+const pinterestInput = document.getElementById('pinterest-search-input');
+let pinterestDebounce = null;
+
+if (pinterestInput) {
+  pinterestInput.addEventListener('input', function() {
+    clearTimeout(pinterestDebounce);
+    const q = this.value.trim();
+    if (q.length < 2) {
+      document.getElementById('pinterest-results').innerHTML = '';
+      document.getElementById('pinterest-search-spinner').classList.add('hidden');
+      return;
+    }
+    pinterestDebounce = setTimeout(() => searchPinterest(q), 400);
+  });
+
+  pinterestInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(pinterestDebounce);
+      const q = this.value.trim();
+      if (q.length >= 2) searchPinterest(q);
+    }
+  });
+}
+
+async function searchPinterest(query) {
+  const resultsEl = document.getElementById('pinterest-results');
+  const spinner = document.getElementById('pinterest-search-spinner');
+  const errorEl = document.getElementById('pinterest-error');
+  errorEl.classList.add('hidden');
+  spinner.classList.remove('hidden');
+  resultsEl.innerHTML = '';
+
+  try {
+    const images = await searchPinterestApi(query);
+    spinner.classList.add('hidden');
+
+    if (!images || images.length === 0) {
+      resultsEl.innerHTML = '<div class="admin-pinterest-empty">No images found. Try a different search term.</div>';
+      return;
+    }
+
+    images.forEach(img => {
+      const div = document.createElement('div');
+      div.className = 'admin-pinterest-item';
+      div.innerHTML = `<img src="${img.thumbnail}" alt="" loading="lazy">`;
+      div.addEventListener('click', () => addPinterestImage(img.original));
+      resultsEl.appendChild(div);
+    });
+  } catch (err) {
+    spinner.classList.add('hidden');
+    errorEl.textContent = 'Search failed. Try again.';
+    errorEl.classList.remove('hidden');
+    resultsEl.innerHTML = '';
+  }
+}
+
+function addPinterestImage(url) {
+  const textarea = document.getElementById('field-images');
+  const existing = textarea.value.trim();
+  textarea.value = existing ? existing + '\n' + url : url;
+  renderImagePreviews();
+
+  // Visual feedback on the button
+  const btn = document.getElementById('pinterest-toggle-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-check"></i> Image Added';
+  setTimeout(() => { btn.innerHTML = origText; }, 1500);
+}
+
 /* ───── Add Spec Row ───── */
 function addSpecRow(key = '', value = '') {
   const container = document.getElementById('specs-container');
