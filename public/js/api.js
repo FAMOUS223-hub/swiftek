@@ -280,6 +280,14 @@ async function deleteForeverApi(id) {
   return apiDelete(`/api/trash/${id}`);
 }
 
+async function bulkDeleteProductsApi(ids) {
+  return apiPost('/api/products/bulk-delete', { ids });
+}
+
+async function bulkTrashActionApi(ids, action) {
+  return apiPost('/api/trash/bulk', { ids, action });
+}
+
 // ───── Admin Products (auth required) ─────
 
 async function fetchAdminProducts(date) {

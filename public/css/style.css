@@ -3835,7 +3835,9 @@ select.admin-input { cursor: pointer; }
 
 .admin-user-check { display: none; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; margin-right: 4px; }
 .admin-bulk-active .admin-user-check,
-.admin-order-header > .admin-user-check { display: block; }
+.admin-order-header > .admin-user-check { display: inline-block; }
+.admin-bulk-active .admin-user-check { display: block; }
+.admin-bulk-active .admin-product-name > .admin-user-check { margin-bottom: 4px; }
 .admin-bulk-active .admin-product-actions { display: none !important; }
 .admin-bulk-toggle-wrap { margin-bottom: 14px; }
 .admin-toggle-label {

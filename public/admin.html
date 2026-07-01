@@ -126,6 +126,20 @@
 
       <!-- Product List -->
       <div id="product-list-area">
+        <div class="admin-bulk-toolbar hidden" id="bulk-products-toolbar">
+          <span class="admin-bulk-count" id="bulk-products-count">0 selected</span>
+          <div class="admin-bulk-actions">
+            <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="bulkDeleteProducts()" disabled><i class="fas fa-trash"></i> Delete</button>
+          </div>
+          <button class="admin-btn-sm admin-btn-danger" onclick="exitBulkProductsMode()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-bulk-toggle-wrap">
+          <label class="admin-toggle-label">
+            <input type="checkbox" id="bulk-products-toggle" onchange="toggleBulkProductsMode()">
+            <span class="admin-toggle-track"><span class="admin-toggle-knob"></span></span>
+            <span class="admin-toggle-text">Multi-select</span>
+          </label>
+        </div>
         <div id="admin-product-list" class="admin-product-list"></div>
       </div>
 
@@ -140,6 +154,21 @@
       <div id="trash-section" class="hidden admin-section-block">
         <h2 class="admin-section-title"><i class="fas fa-trash"></i> Trash</h2>
         <p class="admin-section-desc">Deleted products can be restored or permanently deleted.</p>
+        <div class="admin-bulk-toolbar hidden" id="bulk-trash-toolbar">
+          <span class="admin-bulk-count" id="bulk-trash-count">0 selected</span>
+          <div class="admin-bulk-actions">
+            <button class="admin-btn-sm admin-btn-outline" onclick="bulkRestoreTrash()" disabled><i class="fas fa-undo"></i> Restore</button>
+            <button class="admin-btn-sm admin-btn-outline admin-btn-sm-danger" onclick="bulkDeleteForeverTrash()" disabled><i class="fas fa-trash"></i> Delete Forever</button>
+          </div>
+          <button class="admin-btn-sm admin-btn-danger" onclick="exitBulkTrashMode()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-bulk-toggle-wrap">
+          <label class="admin-toggle-label">
+            <input type="checkbox" id="bulk-trash-toggle" onchange="toggleBulkTrashMode()">
+            <span class="admin-toggle-track"><span class="admin-toggle-knob"></span></span>
+            <span class="admin-toggle-text">Multi-select</span>
+          </label>
+        </div>
         <div id="trash-list" class="admin-product-list"></div>
       </div>
 

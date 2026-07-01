@@ -1728,6 +1728,48 @@ app.delete('/api/trash/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/products/bulk-delete', requireAuth, async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No product IDs provided' });
+  }
+  const products = await AdminProduct.findAll({ where: { id: ids }, raw: true });
+  for (const product of products) {
+    await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
+  }
+  await AdminProduct.destroy({ where: { id: ids } });
+  invalidateProductCache();
+  res.json({ success: true, moved: products.length });
+});
+
+app.post('/api/trash/bulk', requireAuth, async (req, res) => {
+  const { ids, action } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No IDs provided' });
+  }
+  if (action === 'restore') {
+    const items = await TrashItem.findAll({ where: { id: ids }, raw: true });
+    await TrashItem.destroy({ where: { id: ids } });
+    for (const item of items) {
+      const exists = await AdminProduct.findOne({ where: { id: item.id } });
+      if (!exists) {
+        const restored = { ...item };
+        delete restored._trashedAt;
+        delete restored._wasAdminProduct;
+        await AdminProduct.create(restored);
+      }
+    }
+    invalidateProductCache();
+    res.json({ success: true, restored: items.length });
+  } else if (action === 'delete') {
+    await TrashItem.destroy({ where: { id: ids } });
+    invalidateProductCache();
+    res.json({ success: true, deleted: ids.length });
+  } else {
+    res.status(400).json({ error: 'Invalid action. Use "restore" or "delete".' });
+  }
+});
+
 app.get('/api/admin/products', requireAuth, async (req, res) => {
   try {
     const { date } = req.query;

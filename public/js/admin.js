@@ -180,6 +180,8 @@ async function renderAdminProducts() {
   }
 
   container.innerHTML = filtered.map(p => {
+    const bulkOn = document.getElementById('bulk-products-toggle')?.checked;
+    const checkbox = `<input type="checkbox" class="admin-user-check" data-product-id="${p.id}" data-product-name="${escapeHtml(p.name)}" onchange="updateBulkProductsCount()" ${bulkOn ? '' : 'style="display:none"'}>`;
     return `
     <div class="admin-product-item">
       <div class="admin-product-img">
@@ -188,7 +190,7 @@ async function renderAdminProducts() {
           : '<div class="admin-no-img"><i class="fas fa-camera"></i></div>'}
       </div>
       <div class="admin-product-info">
-        <div class="admin-product-name">${escapeHtml(p.name)}</div>
+        <div class="admin-product-name">${checkbox} ${escapeHtml(p.name)}</div>
         <div class="admin-product-meta">${escapeHtml(p.brand)} · ${escapeHtml(p.category)} · GH₵ ${p.basePrice.toLocaleString()}</div>
       </div>
       <div class="admin-product-actions">
@@ -197,6 +199,18 @@ async function renderAdminProducts() {
       </div>
     </div>`;
   }).join('');
+
+  const listArea = document.getElementById('product-list-area');
+  const bulkToggle = document.getElementById('bulk-products-toggle');
+  const bulkOn = bulkToggle?.checked;
+  if (bulkOn) {
+    listArea?.classList.add('admin-bulk-active');
+    document.getElementById('bulk-products-toolbar')?.classList.remove('hidden');
+  } else {
+    listArea?.classList.remove('admin-bulk-active');
+    document.getElementById('bulk-products-toolbar')?.classList.add('hidden');
+  }
+  updateBulkProductsCount();
 }
 
 /* ───── Delete / Trash ───── */
@@ -280,7 +294,12 @@ async function renderTrash() {
   }
 
   section.classList.remove('hidden');
-  container.innerHTML = trash.map(t => `
+
+  const bulkOn = document.getElementById('bulk-trash-toggle')?.checked;
+
+  container.innerHTML = trash.map(t => {
+    const checkbox = `<input type="checkbox" class="admin-user-check" data-trash-id="${t.id}" onchange="updateBulkTrashCount()" ${bulkOn ? '' : 'style="display:none"'}>`;
+    return `
     <div class="admin-product-item">
       <div class="admin-product-img">
         ${t.images && t.images[0]
@@ -288,7 +307,7 @@ async function renderTrash() {
           : '<div class="admin-no-img"><i class="fas fa-camera"></i></div>'}
       </div>
       <div class="admin-product-info">
-        <div class="admin-product-name">${escapeHtml(t.name)}</div>
+        <div class="admin-product-name">${checkbox} ${escapeHtml(t.name)}</div>
         <div class="admin-product-meta">${escapeHtml(t.brand)} · ${escapeHtml(t.category)} · GH₵ ${t.basePrice.toLocaleString()}</div>
         <div class="admin-product-meta admin-product-meta-trashed">Trashed ${new Date(t._trashedAt).toLocaleDateString()}</div>
       </div>
@@ -296,8 +315,17 @@ async function renderTrash() {
         <button class="admin-btn-sm admin-btn-primary" onclick="restoreProduct(${t.id})">Restore</button>
         <button class="admin-btn-sm admin-btn-danger" onclick="deleteForever(${t.id})">Delete Forever</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+
+  if (bulkOn) {
+    section.classList.add('admin-bulk-active');
+    document.getElementById('bulk-trash-toolbar')?.classList.remove('hidden');
+  } else {
+    section.classList.remove('admin-bulk-active');
+    document.getElementById('bulk-trash-toolbar')?.classList.add('hidden');
+  }
+  updateBulkTrashCount();
 }
 
 /* ───── Section Navigation ───── */
@@ -897,6 +925,127 @@ async function bulkDelete() {
     showToast(`${ids.length} user(s) deleted`);
     renderUsers();
   } catch (err) { showToast('Error: ' + err.message); }
+}
+
+/* ───── Bulk Products ───── */
+
+function toggleBulkProductsMode() {
+  renderAdminProducts();
+}
+
+function exitBulkProductsMode() {
+  document.getElementById('bulk-products-toggle').checked = false;
+  renderAdminProducts();
+}
+
+function updateBulkProductsCount() {
+  const checked = document.querySelectorAll('#admin-product-list .admin-user-check:checked').length;
+  document.getElementById('bulk-products-count').textContent = checked + ' selected';
+  document.querySelectorAll('#bulk-products-toolbar .admin-btn-sm').forEach(b => b.disabled = checked === 0);
+}
+
+function getSelectedProductIds() {
+  return Array.from(document.querySelectorAll('#admin-product-list .admin-user-check:checked')).map(cb => cb.dataset.productId);
+}
+
+async function bulkDeleteProducts() {
+  const ids = getSelectedProductIds();
+  if (!ids.length) return;
+
+  const names = ids.map(id => {
+    const cb = document.querySelector(`#admin-product-list .admin-user-check[data-product-id="${id}"]`);
+    return cb ? cb.dataset.productName : id;
+  });
+
+  const ok = await showModal({
+    title: 'Bulk Delete',
+    message: `<p>Move <strong>${ids.length} product(s)</strong> to trash?</p><ul style="margin-top:8px;font-size:13px;color:var(--text-secondary);list-style:disc;padding-left:18px;">${names.slice(0, 5).map(n => `<li>${escapeHtml(n)}</li>`).join('')}${names.length > 5 ? `<li>…and ${names.length - 5} more</li>` : ''}</ul>`,
+    confirmText: 'Move to Trash',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!ok) return;
+
+  try {
+    await bulkDeleteProductsApi(ids);
+    showToast(`${ids.length} product(s) moved to trash`);
+    exitBulkProductsMode();
+    await renderAdminProducts();
+    updateTrashBadge();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+/* ───── Bulk Trash ───── */
+
+function toggleBulkTrashMode() {
+  renderTrash();
+}
+
+function exitBulkTrashMode() {
+  document.getElementById('bulk-trash-toggle').checked = false;
+  renderTrash();
+}
+
+function updateBulkTrashCount() {
+  const checked = document.querySelectorAll('#trash-list .admin-user-check:checked').length;
+  document.getElementById('bulk-trash-count').textContent = checked + ' selected';
+  document.querySelectorAll('#bulk-trash-toolbar .admin-btn-sm').forEach(b => b.disabled = checked === 0);
+}
+
+function getSelectedTrashIds() {
+  return Array.from(document.querySelectorAll('#trash-list .admin-user-check:checked')).map(cb => cb.dataset.trashId);
+}
+
+async function bulkRestoreTrash() {
+  const ids = getSelectedTrashIds();
+  if (!ids.length) return;
+
+  const ok = await showModal({
+    title: 'Bulk Restore',
+    message: `Restore <strong>${ids.length}</strong> trashed product(s)?`,
+    confirmText: 'Restore All',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!ok) return;
+
+  try {
+    await bulkTrashActionApi(ids, 'restore');
+    showToast(`${ids.length} product(s) restored`);
+    exitBulkTrashMode();
+    await renderTrash();
+    updateTrashBadge();
+    await renderAdminProducts();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function bulkDeleteForeverTrash() {
+  const ids = getSelectedTrashIds();
+  if (!ids.length) return;
+
+  const ok = await showModal({
+    title: 'Bulk Delete Forever',
+    message: `Permanently delete <strong>${ids.length}</strong> trashed product(s)? This cannot be undone.`,
+    confirmText: 'Delete Forever',
+    cancelText: 'Cancel',
+    type: 'confirm'
+  });
+  if (!ok) return;
+
+  try {
+    await bulkTrashActionApi(ids, 'delete');
+    showToast(`${ids.length} product(s) permanently deleted`);
+    exitBulkTrashMode();
+    await renderTrash();
+    updateTrashBadge();
+    await renderAdminProducts();
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
 }
 
 async function deleteUserConfirm(userId, userName) {
