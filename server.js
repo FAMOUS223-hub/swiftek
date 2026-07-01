@@ -454,6 +454,7 @@ app.get('/api/images/search', async (req, res) => {
 
     if (!r1.ok) {
       const text = await r1.text();
+      console.error('Google API error:', r1.status, text.slice(0, 500));
       let msg = `Search failed (${r1.status})`;
       try { const j = JSON.parse(text); msg = j.error?.message || msg; } catch {}
       return res.status(502).json({ error: msg });

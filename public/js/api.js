@@ -304,7 +304,12 @@ async function saveAdminProductApi(data) {
 // ───── Pinterest Search (public) ─────
 
 async function searchImagesApi(query) {
-  return apiGet(`/api/images/search?q=${encodeURIComponent(query)}`);
+  const res = await fetch(`/api/images/search?q=${encodeURIComponent(query)}`, {
+    headers: { ...authHeaders() }
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `Search failed (${res.status})`);
+  return body;
 }
 
 // ───── Stats (public) ─────
