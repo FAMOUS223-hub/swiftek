@@ -230,9 +230,7 @@ function escapeHtml(text) {
 
 const {
   sequelize,
-  SeedProduct,
   AdminProduct,
-  DeletedId,
   TrashItem,
   Session,
   Config,
@@ -274,17 +272,6 @@ function invalidateProductCache() {
   productCache.data = null;
   productCache.time = 0;
 }
-
-async function seedProducts() {
-  const count = await SeedProduct.count();
-  if (count > 0) return;
-
-  const raw = fs.readFileSync(path.join(__dirname, 'data', 'products.json'), 'utf8');
-  const products = JSON.parse(raw);
-  await SeedProduct.bulkCreate(products);
-  console.log(`Seeded ${products.length} products`);
-}
-
 async function ensureAdminUser() {
   const targetEmail = 'bigscany455@gmail.com';
   let admin = await User.findOne({ where: { email: targetEmail } });
@@ -326,31 +313,12 @@ async function getStoreProducts() {
     return productCache.data;
   }
 
-  const [seedProducts, adminProducts, deletedDocs] = await Promise.all([
-    SeedProduct.findAll({ raw: true }),
-    AdminProduct.findAll({ raw: true }),
-    DeletedId.findAll({ raw: true })
-  ]);
+  const adminProducts = await AdminProduct.findAll({ raw: true });
+  const result = adminProducts.map(p => ({ ...p, id: Number(p.id) }));
 
-  const toNum = p => ({ ...p, id: Number(p.id) });
-  const normalizedSeed = seedProducts.map(toNum);
-  const normalizedAdmin = adminProducts.map(toNum);
-
-  const deletedSet = new Set(deletedDocs.map(d => Number(d.id)));
-  const merged = normalizedSeed.filter(p => !deletedSet.has(p.id));
-
-  normalizedAdmin.forEach(ap => {
-    const idx = merged.findIndex(p => p.id === ap.id);
-    if (idx >= 0) {
-      merged[idx] = { ...merged[idx], ...ap };
-    } else {
-      merged.push(ap);
-    }
-  });
-
-  productCache.data = merged;
+  productCache.data = result;
   productCache.time = now;
-  return merged;
+  return result;
 }
 
 app.get('/api/products', async (req, res) => {
@@ -465,16 +433,14 @@ app.get('/api/products/:id/comments', async (req, res) => {
 });
 
 app.get('/api/stats', async (req, res) => {
-  const [adminProducts, trash, deleted] = await Promise.all([
+  const [adminProducts, trash] = await Promise.all([
     AdminProduct.findAll({ where: { _adminCreated: true }, raw: true }),
-    TrashItem.findAll({ raw: true }),
-    DeletedId.findAll({ raw: true })
+    TrashItem.findAll({ raw: true })
   ]);
   res.json({
     total: (await getStoreProducts()).length,
     adminCreated: adminProducts.length,
-    inTrash: trash.length,
-    deletedCount: deleted.length
+    inTrash: trash.length
   });
 });
 
@@ -1726,27 +1692,11 @@ app.get('/api/trash', requireAuth, async (req, res) => {
 
 app.delete('/api/products/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
-  const [seedProduct, adminProduct] = await Promise.all([
-    SeedProduct.findOne({ where: { id }, raw: true }),
-    AdminProduct.findOne({ where: { id }, raw: true })
-  ]);
-
-  const product = seedProduct || adminProduct;
+  const product = await AdminProduct.findOne({ where: { id }, raw: true });
   if (!product) return res.status(404).json({ error: 'Product not found' });
 
-  const isStatic = id < 101;
-  const isAdminManaged = !!adminProduct;
-
-  await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: isAdminManaged });
-
+  await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
   await AdminProduct.destroy({ where: { id } });
-
-  if (isStatic) {
-    const exists = await DeletedId.findOne({ where: { id } });
-    if (!exists) {
-      await DeletedId.create({ id });
-    }
-  }
 
   invalidateProductCache();
   res.json({ success: true });
@@ -1759,16 +1709,12 @@ app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
 
   await TrashItem.destroy({ where: { id } });
 
-  if (item._wasAdminProduct) {
-    const exists = await AdminProduct.findOne({ where: { id } });
-    if (!exists) {
-      const restored = { ...item };
-      delete restored._trashedAt;
-      delete restored._wasAdminProduct;
-      await AdminProduct.create(restored);
-    }
-  } else {
-    await DeletedId.destroy({ where: { id } });
+  const exists = await AdminProduct.findOne({ where: { id } });
+  if (!exists) {
+    const restored = { ...item };
+    delete restored._trashedAt;
+    delete restored._wasAdminProduct;
+    await AdminProduct.create(restored);
   }
 
   invalidateProductCache();
@@ -1806,12 +1752,12 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
     const existing = await AdminProduct.findOne({ where: { id } });
     if (existing) {
       await AdminProduct.update(data, { where: { id } });
-    } else if (id < 101) {
-      await AdminProduct.create({ ...data, id, _adminOverride: true });
+    } else {
+      await AdminProduct.create({ ...data, id, _adminCreated: true });
     }
   } else {
     const maxDoc = await AdminProduct.findOne({ order: [['id', 'DESC']], raw: true });
-    const maxId = maxDoc ? Math.max(maxDoc.id, 100) : 100;
+    const maxId = maxDoc ? maxDoc.id : 0;
     await AdminProduct.create({ ...data, id: maxId + 1, _adminCreated: true });
   }
 
@@ -1847,7 +1793,6 @@ async function start() {
     await sequelize.sync();
     console.log('Database tables synced');
     await sequelize.query('ALTER TABLE "Orders" ALTER COLUMN "userId" DROP NOT NULL').catch(() => {});
-    await seedProducts();
     await ensureAdminUser();
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`SwifTek server running at http://0.0.0.0:${PORT}`);

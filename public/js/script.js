@@ -6,24 +6,7 @@ async function getStoreProducts() {
     const res = await fetch('/api/products');
     return await res.json();
   } catch {
-    const merged = products
-      .filter(p => !(JSON.parse(localStorage.getItem('swiftek_admin_deleted') || '[]')).includes(p.id))
-      .map(p => ({ ...p }));
-
-    const adminProducts = JSON.parse(localStorage.getItem('swiftek_admin_products') || '[]');
-    adminProducts.forEach(item => {
-      if (item._adminCreated) {
-        merged.push(item);
-        return;
-      }
-      const existingIndex = merged.findIndex(p => p.id === item.id);
-      if (existingIndex >= 0) {
-        merged[existingIndex] = { ...merged[existingIndex], ...item };
-      } else {
-        merged.push(item);
-      }
-    });
-    return merged;
+    return [];
   }
 }
 

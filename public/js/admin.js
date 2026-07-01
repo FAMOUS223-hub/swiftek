@@ -7,14 +7,6 @@ function togglePassword(btn) {
 
 let editingId = null;
 
-function isStaticProduct(id) {
-  return id < 101;
-}
-
-function isAdminCreated(id, adminProducts) {
-  return adminProducts.some(p => p.id === id && p._adminCreated);
-}
-
 /* ───── Login ───── */
 const loginForm = document.getElementById('admin-login-form');
 const loginScreen = document.getElementById('login-screen');
@@ -188,7 +180,6 @@ async function renderAdminProducts() {
   }
 
   container.innerHTML = filtered.map(p => {
-    const isAdmin = isAdminCreated(p.id, adminProducts);
     return `
     <div class="admin-product-item">
       <div class="admin-product-img">
@@ -199,7 +190,6 @@ async function renderAdminProducts() {
       <div class="admin-product-info">
         <div class="admin-product-name">${escapeHtml(p.name)}</div>
         <div class="admin-product-meta">${escapeHtml(p.brand)} · ${escapeHtml(p.category)} · GH₵ ${p.basePrice.toLocaleString()}</div>
-        <div class="admin-product-badge ${isAdmin ? 'badge-admin' : 'badge-static'}">${isAdmin ? 'Admin' : 'Static'}</div>
       </div>
       <div class="admin-product-actions">
         <button class="admin-btn-sm admin-btn-outline" onclick="editProduct(${p.id})">Edit</button>
