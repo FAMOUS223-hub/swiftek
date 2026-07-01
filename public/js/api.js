@@ -303,8 +303,8 @@ async function saveAdminProductApi(data) {
 
 // ───── Pinterest Search (public) ─────
 
-async function searchImagesApi(query) {
-  const res = await fetch(`/api/images/search?q=${encodeURIComponent(query)}`, {
+async function searchImagesApi(query, page = 1) {
+  const res = await fetch(`/api/images/search?q=${encodeURIComponent(query)}&page=${page}`, {
     headers: { ...authHeaders() }
   });
   const body = await res.json().catch(() => ({}));

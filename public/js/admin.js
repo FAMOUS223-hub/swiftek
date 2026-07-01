@@ -597,32 +597,41 @@ document.getElementById('image-preview-container')?.addEventListener('click', (e
 
 /* ───── Image Search Modal ───── */
 
+let imgSearchDebounce = null;
+let imgSearchCurrentQuery = '';
+let imgSearchCurrentPage = 1;
+let imgSearchTotalPages = 1;
+
 function openImageSearch() {
   document.getElementById('image-search-modal')?.classList.remove('hidden');
   document.getElementById('img-search-results').innerHTML = '';
+  document.getElementById('img-search-pagination').innerHTML = '';
   document.getElementById('img-search-error').classList.add('hidden');
   document.getElementById('img-search-hint').classList.remove('hidden');
   document.getElementById('img-search-input').value = '';
   document.getElementById('img-search-input').focus();
+  imgSearchCurrentQuery = '';
+  imgSearchCurrentPage = 1;
+  imgSearchTotalPages = 1;
 }
 
 function closeImageSearch() {
   document.getElementById('image-search-modal')?.classList.add('hidden');
 }
 
-let imgSearchDebounce = null;
-
 document.addEventListener('input', function(e) {
   if (e.target.id !== 'img-search-input') return;
   clearTimeout(imgSearchDebounce);
   const q = e.target.value.trim();
+  imgSearchCurrentQuery = q;
   document.getElementById('img-search-error').classList.add('hidden');
   if (q.length < 2) {
     document.getElementById('img-search-results').innerHTML = '';
+    document.getElementById('img-search-pagination').innerHTML = '';
     document.getElementById('img-search-hint').classList.remove('hidden');
     return;
   }
-  imgSearchDebounce = setTimeout(() => searchImages(q), 350);
+  imgSearchDebounce = setTimeout(() => searchImages(q, 1), 150);
 });
 
 document.addEventListener('keydown', function(e) {
@@ -630,12 +639,17 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
     clearTimeout(imgSearchDebounce);
     const q = document.activeElement.value.trim();
-    if (q.length >= 2) searchImages(q);
+    imgSearchCurrentQuery = q;
+    if (q.length >= 2) searchImages(q, 1);
   }
 });
 
-async function searchImages(query) {
+async function searchImages(query, page) {
+  imgSearchCurrentQuery = query;
+  imgSearchCurrentPage = page;
+
   const resultsEl = document.getElementById('img-search-results');
+  const paginationEl = document.getElementById('img-search-pagination');
   const spinner = document.getElementById('img-search-spinner');
   const errorEl = document.getElementById('img-search-error');
   const hint = document.getElementById('img-search-hint');
@@ -643,13 +657,18 @@ async function searchImages(query) {
   hint.classList.add('hidden');
   spinner.classList.remove('hidden');
   resultsEl.innerHTML = '';
+  paginationEl.innerHTML = '';
   errorEl.classList.add('hidden');
 
   try {
-    const images = await searchImagesApi(query);
+    const data = await searchImagesApi(query, page);
     spinner.classList.add('hidden');
 
-    if (!images || images.length === 0) {
+    const images = data.results || [];
+    const total = data.total || 0;
+    imgSearchTotalPages = Math.max(1, Math.ceil(total / 30));
+
+    if (images.length === 0) {
       resultsEl.innerHTML = '<div class="img-search-empty">No images found. Try a different search term.</div>';
       return;
     }
@@ -667,12 +686,52 @@ async function searchImages(query) {
         closeImageSearch();
       });
     });
+
+    paginationEl.innerHTML = renderPagination(imgSearchCurrentPage, imgSearchTotalPages);
   } catch (err) {
     spinner.classList.add('hidden');
     errorEl.textContent = err.message || 'Search failed. Try again.';
     errorEl.classList.remove('hidden');
   }
 }
+
+function renderPagination(currentPage, totalPages) {
+  if (totalPages <= 1) return '';
+
+  let html = '<div class="img-search-pagination-inner">';
+
+  html += `<button class="img-search-page-btn" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+
+  const range = 2;
+  let start = Math.max(1, currentPage - range);
+  let end = Math.min(totalPages, currentPage + range);
+
+  if (start > 1) {
+    html += `<button class="img-search-page-btn" data-page="1">1</button>`;
+    if (start > 2) html += '<span class="img-search-page-ellipsis">…</span>';
+  }
+  for (let i = start; i <= end; i++) {
+    html += `<button class="img-search-page-btn${i === currentPage ? ' active' : ''}" data-page="${i}">${i}</button>`;
+  }
+  if (end < totalPages) {
+    if (end < totalPages - 1) html += '<span class="img-search-page-ellipsis">…</span>';
+    html += `<button class="img-search-page-btn" data-page="${totalPages}">${totalPages}</button>`;
+  }
+
+  html += `<button class="img-search-page-btn" data-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+
+  html += '</div>';
+  return html;
+}
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.img-search-page-btn');
+  if (!btn || btn.disabled) return;
+  const page = parseInt(btn.dataset.page);
+  if (page && imgSearchCurrentQuery) {
+    searchImages(imgSearchCurrentQuery, page);
+  }
+});
 
 function addImageToProduct(url) {
   const textarea = document.getElementById('field-images');

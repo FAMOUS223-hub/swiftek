@@ -3922,6 +3922,64 @@ select.admin-input { cursor: pointer; }
   padding: 24px 0;
   text-align: center;
 }
+
+.img-search-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.img-search-pagination-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.img-search-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  line-height: 1;
+  user-select: none;
+}
+
+.img-search-page-btn:hover:not(:disabled):not(.active) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.img-search-page-btn.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  pointer-events: none;
+}
+
+.img-search-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.img-search-page-ellipsis {
+  padding: 0 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
 .admin-bulk-toggle-wrap { margin-bottom: 14px; }
 .admin-toggle-label {
   display: inline-flex;

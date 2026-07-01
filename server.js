@@ -434,6 +434,7 @@ app.get('/api/products/:id/comments', async (req, res) => {
 
 app.get('/api/images/search', async (req, res) => {
   const q = req.query.q;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
   if (!q || q.trim().length < 2) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
@@ -442,7 +443,7 @@ app.get('/api/images/search', async (req, res) => {
     return res.status(503).json({ error: 'Image search not configured — missing Pixabay API key. Set PIXABAY_API_KEY in environment (free at pixabay.com/api).' });
   }
   try {
-    const resp = await fetch(`https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(q.trim())}&image_type=photo&per_page=30`);
+    const resp = await fetch(`https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(q.trim())}&image_type=photo&per_page=30&page=${page}`);
     if (!resp.ok) {
       return res.status(502).json({ error: `Pixabay error (${resp.status})` });
     }
@@ -452,7 +453,7 @@ app.get('/api/images/search', async (req, res) => {
       original: p.largeImageURL,
       alt: p.tags || ''
     }));
-    res.json(results);
+    res.json({ results, total: data.totalHits || 0 });
   } catch (err) {
     console.error('Image search error:', err.message);
     res.status(500).json({ error: 'Search failed — ' + err.message });
