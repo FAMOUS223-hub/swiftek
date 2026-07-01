@@ -3845,6 +3845,12 @@ select.admin-input { cursor: pointer; }
 .modal-image-search {
   max-width: 640px !important;
 }
+@media (max-width: 480px) {
+  .modal-image-search {
+    max-width: 94vw !important;
+    margin: 4vh auto;
+  }
+}
 .img-search-input-wrap {
   display: flex;
   align-items: center;
@@ -3865,6 +3871,15 @@ select.admin-input { cursor: pointer; }
   margin-top: 12px;
   max-height: 360px;
   overflow-y: auto;
+}
+@media (max-width: 480px) {
+  .img-search-results {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    max-height: 420px;
+  }
+  .img-search-item {
+    min-height: 130px;
+  }
 }
 .img-search-item {
   position: relative;
