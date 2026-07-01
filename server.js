@@ -437,26 +437,28 @@ app.get('/api/images/search', async (req, res) => {
   if (!q || q.trim().length < 2) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
-  const apiKey = process.env.PEXELS_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({ error: 'Pexels API key not configured. Ask admin to set PEXELS_API_KEY in .env (free at pexels.com/api).' });
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const cx = process.env.GOOGLE_CX;
+  if (!apiKey || !cx) {
+    return res.status(503).json({ error: 'Image search not configured — missing Google API key or Search Engine ID' });
   }
   try {
-    const resp = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q.trim())}&per_page=30`, {
-      headers: { 'Authorization': apiKey }
-    });
+    const query = `site:pinterest.com ${q.trim()}`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&searchType=image&num=10`;
+    const resp = await fetch(url);
     if (!resp.ok) {
       const text = await resp.text();
-      return res.status(502).json({ error: `Pexels API error (${resp.status})` });
+      return res.status(502).json({ error: `Google search error (${resp.status})`, detail: text });
     }
     const data = await resp.json();
-    const results = (data.photos || []).map(p => ({
-      thumbnail: p.src.medium,
-      original: p.src.original,
-      photographer: p.photographer,
-      photographerUrl: p.photographer_url,
-      alt: p.alt || ''
-    }));
+    const results = (data.items || []).map(item => {
+      const thumb = item.image?.thumbnailLink || item.link;
+      return {
+        thumbnail: thumb,
+        original: item.link,
+        alt: item.title || ''
+      };
+    });
     res.json(results);
   } catch (err) {
     console.error('Image search error:', err.message);
