@@ -1,14 +1,10 @@
 const WHATSAPP_NUMBER = '233545277534';
 let cart = JSON.parse(localStorage.getItem('swiftek_cart')) || [];
 
-let _cachedProducts = null;
-
 async function getStoreProducts() {
-  if (_cachedProducts) return _cachedProducts;
   try {
     const res = await fetch('/api/products');
-    _cachedProducts = await res.json();
-    return _cachedProducts;
+    return await res.json();
   } catch {
     const merged = products
       .filter(p => !(JSON.parse(localStorage.getItem('swiftek_admin_deleted') || '[]')).includes(p.id))
@@ -27,9 +23,21 @@ async function getStoreProducts() {
         merged.push(item);
       }
     });
-    _cachedProducts = merged;
     return merged;
   }
+}
+
+function computeItemPrice(product, selectedOptions) {
+  let price = product.basePrice;
+  if (product.options && selectedOptions) {
+    for (const [key, value] of Object.entries(selectedOptions)) {
+      if (product.options[key]) {
+        const opt = product.options[key].find(o => o.label === value);
+        if (opt) price += opt.price || 0;
+      }
+    }
+  }
+  return price;
 }
 
 function saveCart() {
@@ -49,15 +57,17 @@ function addToCart(productId, selectedOptions = {}) {
   getProductById(productId).then(product => {
     if (!product) return;
 
-    let totalPrice = product.basePrice;
     const specParts = [];
 
-    for (const [key, value] of Object.entries(selectedOptions)) {
-      if (product.options[key]) {
-        const opt = product.options[key].find(o => o.label === value);
-        if (opt) {
-          totalPrice += opt.price || 0;
-          specParts.push(value);
+    if (product.options) {
+      for (const [key, value] of Object.entries(selectedOptions)) {
+        if (product.options[key]) {
+          const opt = product.options[key].find(o => o.label === value);
+          if (opt && opt.price !== undefined) {
+            specParts.push(value);
+          } else if (opt) {
+            specParts.push(value);
+          }
         }
       }
     }
@@ -74,7 +84,6 @@ function addToCart(productId, selectedOptions = {}) {
         productId,
         selectedOptions: selectedOptions || {},
         qty: 1,
-        price: totalPrice,
         specs: specParts.join(', ')
       });
     }
@@ -111,8 +120,15 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function getCartTotal() {
-  return cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+async function getCartTotal() {
+  let total = 0;
+  for (const item of cart) {
+    const product = await getProductById(item.productId);
+    if (product) {
+      total += computeItemPrice(product, item.selectedOptions) * item.qty;
+    }
+  }
+  return total;
 }
 
 async function getProductById(id) {
@@ -168,7 +184,6 @@ function checkoutWhatsApp() {
     });
   }
 
-  const total = getCartTotal();
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -190,15 +205,25 @@ function checkoutWhatsApp() {
   const promises = cart.map(async (item, i) => {
     const product = await getProductById(item.productId);
     if (!product) return '';
+    const currentPrice = computeItemPrice(product, item.selectedOptions);
     let msg = `%0A`;
     msg += `*${i + 1}. ${escapeHtml(product.name)}*%0A`;
     if (item.specs) msg += `   ─ ${escapeHtml(item.specs)}%0A`;
-    msg += `   Qty: ${item.qty}  ×  ${formatPrice(item.price)}%0A`;
+    msg += `   Qty: ${item.qty}  ×  ${formatPrice(currentPrice)}%0A`;
     msg += `   ─────────────────────────%0A`;
     return msg;
   });
 
   Promise.all(promises).then(async (items) => {
+    const cartItems = await Promise.all(cart.map(async (item) => {
+      const product = await getProductById(item.productId);
+      return { product, item };
+    }));
+    const total = cartItems.reduce((sum, { product, item }) => {
+      if (!product) return sum;
+      return sum + computeItemPrice(product, item.selectedOptions) * item.qty;
+    }, 0);
+
     message += items.join('');
     message += `%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A`;
     message += `*💰  TOTAL AMOUNT  ${formatPrice(total)}*%0A`;
@@ -223,10 +248,11 @@ function checkoutWhatsApp() {
     if (typeof createOrderApi === 'function') {
       const orderItems = await Promise.all(cart.map(async (item) => {
         const product = await getProductById(item.productId);
+        const currentPrice = computeItemPrice(product, item.selectedOptions);
         return {
           productId: item.productId,
           name: product ? product.name : 'Unknown Product',
-          price: item.price,
+          price: currentPrice,
           qty: item.qty,
           specs: item.specs || '',
           image: product && product.images ? product.images[0] : ''
@@ -338,6 +364,7 @@ async function renderCart() {
     const img = product.images[0];
     const name = escapeHtml(product.name);
     const specs = item.specs ? escapeHtml(item.specs) : '';
+    const currentPrice = computeItemPrice(product, item.selectedOptions);
     return `
       <div class="cart-item">
         <div class="cart-item-img">
@@ -348,7 +375,7 @@ async function renderCart() {
         <div class="cart-item-info">
           <div class="cart-item-name">${name}</div>
           ${specs ? `<div class="cart-item-specs">${specs}</div>` : ''}
-          <div class="cart-item-price">${formatPrice(item.price)}</div>
+          <div class="cart-item-price">${formatPrice(currentPrice)}</div>
           <div class="cart-item-bottom">
             <div class="qty-control">
               <button class="qty-btn" onclick="updateQty(${index}, -1)">−</button>
@@ -365,7 +392,7 @@ async function renderCart() {
   container.innerHTML = itemsHtml.join('');
 
   if (summary) {
-    const total = getCartTotal();
+    const total = await getCartTotal();
     const subtotalEl = document.getElementById('cart-subtotal');
     const totalEl = document.getElementById('cart-total');
     if (subtotalEl) subtotalEl.textContent = formatPrice(total);
