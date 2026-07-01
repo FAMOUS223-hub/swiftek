@@ -669,11 +669,7 @@ async function searchImages(query) {
     });
   } catch (err) {
     spinner.classList.add('hidden');
-    if (err.message.includes('API key')) {
-      errorEl.textContent = 'Image search not configured. Contact the admin.';
-    } else {
-      errorEl.textContent = 'Search failed. Try again.';
-    }
+    errorEl.textContent = err.message || 'Search failed. Try again.';
     errorEl.classList.remove('hidden');
   }
 }

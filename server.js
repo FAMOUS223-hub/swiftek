@@ -440,29 +440,45 @@ app.get('/api/images/search', async (req, res) => {
   const apiKey = process.env.GOOGLE_API_KEY;
   const cx = process.env.GOOGLE_CX;
   if (!apiKey || !cx) {
-    return res.status(503).json({ error: 'Image search not configured — missing Google API key or Search Engine ID' });
+    return res.status(503).json({ error: 'Image search not configured — missing Google API key or Search Engine ID. Set GOOGLE_API_KEY and GOOGLE_CX in environment.' });
   }
   try {
     const query = `site:pinterest.com ${q.trim()}`;
-    const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&searchType=image&num=10`;
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      const text = await resp.text();
-      return res.status(502).json({ error: `Google search error (${resp.status})`, detail: text });
+    const base = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&searchType=image&num=10`;
+
+    const [r1, r2, r3] = await Promise.all([
+      fetch(base + '&start=1'),
+      fetch(base + '&start=11').catch(() => null),
+      fetch(base + '&start=21').catch(() => null)
+    ]);
+
+    if (!r1.ok) {
+      const text = await r1.text();
+      let msg = `Search failed (${r1.status})`;
+      try { const j = JSON.parse(text); msg = j.error?.message || msg; } catch {}
+      return res.status(502).json({ error: msg });
     }
-    const data = await resp.json();
-    const results = (data.items || []).map(item => {
-      const thumb = item.image?.thumbnailLink || item.link;
-      return {
-        thumbnail: thumb,
-        original: item.link,
-        alt: item.title || ''
-      };
-    });
+
+    const allItems = await r1.json();
+    let items = allItems.items || [];
+
+    for (const r of [r2, r3]) {
+      if (r && r.ok) {
+        const data = await r.json();
+        if (data.items) items = items.concat(data.items);
+      }
+    }
+
+    const results = items.map(item => ({
+      thumbnail: item.image?.thumbnailLink || item.link,
+      original: item.link,
+      alt: item.title || ''
+    }));
+
     res.json(results);
   } catch (err) {
     console.error('Image search error:', err.message);
-    res.status(500).json({ error: 'Image search failed' });
+    res.status(500).json({ error: 'Search request failed — ' + err.message });
   }
 });
 
