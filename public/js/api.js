@@ -303,8 +303,8 @@ async function saveAdminProductApi(data) {
 
 // ───── Pinterest Search (public) ─────
 
-async function searchPinterestApi(query) {
-  return apiGet(`/api/pinterest/search?q=${encodeURIComponent(query)}`);
+async function searchImagesApi(query) {
+  return apiGet(`/api/images/search?q=${encodeURIComponent(query)}`);
 }
 
 // ───── Stats (public) ─────

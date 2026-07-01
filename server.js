@@ -432,57 +432,35 @@ app.get('/api/products/:id/comments', async (req, res) => {
   }
 });
 
-app.get('/api/pinterest/search', async (req, res) => {
+app.get('/api/images/search', async (req, res) => {
+  const q = req.query.q;
+  if (!q || q.trim().length < 2) {
+    return res.status(400).json({ error: 'Query must be at least 2 characters' });
+  }
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ error: 'Pexels API key not configured. Ask admin to set PEXELS_API_KEY in .env (free at pexels.com/api).' });
+  }
   try {
-    const q = req.query.q;
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({ error: 'Query must be at least 2 characters' });
-    }
-    const query = q.trim();
-    const url = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(query)}`;
-    const resp = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5'
-      }
+    const resp = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q.trim())}&per_page=30`, {
+      headers: { 'Authorization': apiKey }
     });
-    const html = await resp.text();
-
-    const results = [];
-    const seen = new Set();
-
-    // Extract Pinterest CDN image URLs from HTML
-    const imgRegex = /https?:\/\/i\.pinimg\.com\/\d+x\/([^"'\s<]+\.(?:jpg|jpeg|png|webp))/gi;
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-      const path = match[1];
-      if (seen.has(path)) continue;
-      seen.add(path);
-      results.push({
-        thumbnail: match[0],
-        original: `https://i.pinimg.com/originals/${path}`
-      });
-      if (results.length >= 50) break;
+    if (!resp.ok) {
+      const text = await resp.text();
+      return res.status(502).json({ error: `Pexels API error (${resp.status})` });
     }
-
-    if (results.length === 0) {
-      // Fallback: extract from embedded JSON
-      const fallbackRegex = /"images"?\s*:\s*\{[^}]*?"originals?"?\s*:\s*\[\s*"([^"]+)"\s*\]/g;
-      let jmatch;
-      while ((jmatch = fallbackRegex.exec(html)) !== null) {
-        const url = jmatch[1];
-        if (seen.has(url)) continue;
-        seen.add(url);
-        results.push({ thumbnail: url, original: url });
-        if (results.length >= 50) break;
-      }
-    }
-
+    const data = await resp.json();
+    const results = (data.photos || []).map(p => ({
+      thumbnail: p.src.medium,
+      original: p.src.original,
+      photographer: p.photographer,
+      photographerUrl: p.photographer_url,
+      alt: p.alt || ''
+    }));
     res.json(results);
   } catch (err) {
-    console.error('Pinterest search error:', err.message);
-    res.status(500).json({ error: 'Failed to search Pinterest' });
+    console.error('Image search error:', err.message);
+    res.status(500).json({ error: 'Image search failed' });
   }
 });
 

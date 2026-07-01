@@ -595,91 +595,94 @@ document.getElementById('image-preview-container')?.addEventListener('click', (e
   renderImagePreviews();
 });
 
-/* ───── Pinterest Image Search ───── */
+/* ───── Image Search Modal ───── */
 
-let pinterestSearchOpen = false;
+function openImageSearch() {
+  document.getElementById('image-search-modal')?.classList.remove('hidden');
+  document.getElementById('img-search-results').innerHTML = '';
+  document.getElementById('img-search-error').classList.add('hidden');
+  document.getElementById('img-search-hint').classList.remove('hidden');
+  document.getElementById('img-search-input').value = '';
+  document.getElementById('img-search-input').focus();
+}
 
-function togglePinterestSearch() {
-  const area = document.getElementById('pinterest-search-area');
-  const btn = document.getElementById('pinterest-toggle-btn');
-  pinterestSearchOpen = !pinterestSearchOpen;
-  area.classList.toggle('hidden', !pinterestSearchOpen);
-  btn.innerHTML = pinterestSearchOpen
-    ? '<i class="fab fa-pinterest"></i> Close Pinterest Search'
-    : '<i class="fab fa-pinterest"></i> Search Pinterest';
-  if (pinterestSearchOpen) {
-    document.getElementById('pinterest-search-input').focus();
+function closeImageSearch() {
+  document.getElementById('image-search-modal')?.classList.add('hidden');
+}
+
+let imgSearchDebounce = null;
+
+document.addEventListener('input', function(e) {
+  if (e.target.id !== 'img-search-input') return;
+  clearTimeout(imgSearchDebounce);
+  const q = e.target.value.trim();
+  document.getElementById('img-search-error').classList.add('hidden');
+  if (q.length < 2) {
+    document.getElementById('img-search-results').innerHTML = '';
+    document.getElementById('img-search-hint').classList.remove('hidden');
+    return;
   }
-}
+  imgSearchDebounce = setTimeout(() => searchImages(q), 350);
+});
 
-const pinterestInput = document.getElementById('pinterest-search-input');
-let pinterestDebounce = null;
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.activeElement?.id === 'img-search-input') {
+    e.preventDefault();
+    clearTimeout(imgSearchDebounce);
+    const q = document.activeElement.value.trim();
+    if (q.length >= 2) searchImages(q);
+  }
+});
 
-if (pinterestInput) {
-  pinterestInput.addEventListener('input', function() {
-    clearTimeout(pinterestDebounce);
-    const q = this.value.trim();
-    if (q.length < 2) {
-      document.getElementById('pinterest-results').innerHTML = '';
-      document.getElementById('pinterest-search-spinner').classList.add('hidden');
-      return;
-    }
-    pinterestDebounce = setTimeout(() => searchPinterest(q), 400);
-  });
+async function searchImages(query) {
+  const resultsEl = document.getElementById('img-search-results');
+  const spinner = document.getElementById('img-search-spinner');
+  const errorEl = document.getElementById('img-search-error');
+  const hint = document.getElementById('img-search-hint');
 
-  pinterestInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      clearTimeout(pinterestDebounce);
-      const q = this.value.trim();
-      if (q.length >= 2) searchPinterest(q);
-    }
-  });
-}
-
-async function searchPinterest(query) {
-  const resultsEl = document.getElementById('pinterest-results');
-  const spinner = document.getElementById('pinterest-search-spinner');
-  const errorEl = document.getElementById('pinterest-error');
-  errorEl.classList.add('hidden');
+  hint.classList.add('hidden');
   spinner.classList.remove('hidden');
   resultsEl.innerHTML = '';
+  errorEl.classList.add('hidden');
 
   try {
-    const images = await searchPinterestApi(query);
+    const images = await searchImagesApi(query);
     spinner.classList.add('hidden');
 
     if (!images || images.length === 0) {
-      resultsEl.innerHTML = '<div class="admin-pinterest-empty">No images found. Try a different search term.</div>';
+      resultsEl.innerHTML = '<div class="img-search-empty">No images found. Try a different search term.</div>';
       return;
     }
 
-    images.forEach(img => {
-      const div = document.createElement('div');
-      div.className = 'admin-pinterest-item';
-      div.innerHTML = `<img src="${img.thumbnail}" alt="" loading="lazy">`;
-      div.addEventListener('click', () => addPinterestImage(img.original));
-      resultsEl.appendChild(div);
+    resultsEl.innerHTML = images.map(img => `
+      <div class="img-search-item" data-url="${img.original}">
+        <img src="${img.thumbnail}" alt="${escapeHtml(img.alt || '')}" loading="lazy">
+        <div class="img-search-item-overlay"><i class="fas fa-plus"></i></div>
+      </div>
+    `).join('');
+
+    resultsEl.querySelectorAll('.img-search-item').forEach(el => {
+      el.addEventListener('click', () => {
+        addImageToProduct(el.dataset.url);
+        closeImageSearch();
+      });
     });
   } catch (err) {
     spinner.classList.add('hidden');
-    errorEl.textContent = 'Search failed. Try again.';
+    if (err.message.includes('API key')) {
+      errorEl.textContent = 'Image search not configured. Contact the admin.';
+    } else {
+      errorEl.textContent = 'Search failed. Try again.';
+    }
     errorEl.classList.remove('hidden');
-    resultsEl.innerHTML = '';
   }
 }
 
-function addPinterestImage(url) {
+function addImageToProduct(url) {
   const textarea = document.getElementById('field-images');
   const existing = textarea.value.trim();
   textarea.value = existing ? existing + '\n' + url : url;
   renderImagePreviews();
-
-  // Visual feedback on the button
-  const btn = document.getElementById('pinterest-toggle-btn');
-  const origText = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-check"></i> Image Added';
-  setTimeout(() => { btn.innerHTML = origText; }, 1500);
 }
 
 /* ───── Add Spec Row ───── */
