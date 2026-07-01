@@ -640,7 +640,7 @@ async function renderProductDetail() {
           <div class="opt-list">
             ${familyFiltered.map(fp => `
               <a href="product.html?id=${fp.id}" class="opt-btn ${fp.id === product.id ? 'selected' : ''}">
-                ${escapeHtml(fp.name)}${fp.basePrice !== product.basePrice ? ` — ${formatPrice(fp.basePrice)}` : ''}
+                ${escapeHtml(fp.name)}
               </a>
             `).join('')}
           </div>
