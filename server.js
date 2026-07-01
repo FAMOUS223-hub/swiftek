@@ -437,23 +437,20 @@ app.get('/api/images/search', async (req, res) => {
   if (!q || q.trim().length < 2) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
-  const apiKey = process.env.PEXELS_API_KEY;
+  const apiKey = process.env.PIXABAY_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ error: 'Image search not configured — missing Pexels API key. Set PEXELS_API_KEY in environment (free at pexels.com/api).' });
+    return res.status(503).json({ error: 'Image search not configured — missing Pixabay API key. Set PIXABAY_API_KEY in environment (free at pixabay.com/api).' });
   }
   try {
-    const resp = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q.trim())}&per_page=30`, {
-      headers: { 'Authorization': apiKey }
-    });
+    const resp = await fetch(`https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(q.trim())}&image_type=photo&per_page=30`);
     if (!resp.ok) {
-      const text = await resp.text();
-      return res.status(502).json({ error: `Pexels error (${resp.status})` });
+      return res.status(502).json({ error: `Pixabay error (${resp.status})` });
     }
     const data = await resp.json();
-    const results = (data.photos || []).map(p => ({
-      thumbnail: p.src.medium,
-      original: p.src.original,
-      alt: p.alt || ''
+    const results = (data.hits || []).map(p => ({
+      thumbnail: p.webformatURL,
+      original: p.largeImageURL,
+      alt: p.tags || ''
     }));
     res.json(results);
   } catch (err) {
