@@ -216,11 +216,15 @@ async function renderAdminProducts() {
 /* ───── Delete / Trash ───── */
 
 async function deleteProduct(id) {
-  const storeProducts = await fetchProducts();
-  const p = storeProducts.find(p => p.id === id);
+  let name = id;
+  try {
+    const storeProducts = await fetchProducts();
+    const p = storeProducts.find(p => p.id === id);
+    if (p) name = p.name;
+  } catch (_) {}
   const confirmed = await showModal({
     title: 'Move to Trash',
-    message: `Move "${p ? p.name : id}" to trash? You can restore it later.`,
+    message: `Move "${name}" to trash? You can restore it later.`,
     confirmText: 'Move to Trash',
     cancelText: 'Cancel',
     type: 'confirm'
@@ -234,7 +238,7 @@ async function deleteProduct(id) {
     return;
   }
 
-  updateTrashBadge();
+  try { updateTrashBadge(); } catch (_) {}
   location.reload();
 }
 
@@ -245,16 +249,20 @@ async function restoreProduct(id) {
     await showModal({ title: 'Error', message: e.message, type: 'alert' });
     return;
   }
-  updateTrashBadge();
+  try { updateTrashBadge(); } catch (_) {}
   location.reload();
 }
 
 async function deleteForever(id) {
-  const trash = await fetchTrash();
-  const item = trash.find(t => t.id === id);
+  let name = id;
+  try {
+    const trash = await fetchTrash();
+    const item = trash.find(t => t.id === id);
+    if (item) name = item.name;
+  } catch (_) {}
   const confirmed = await showModal({
     title: 'Delete Forever',
-    message: `Permanently delete "${item ? item.name : id}"? This cannot be undone.`,
+    message: `Permanently delete "${name}"? This cannot be undone.`,
     confirmText: 'Delete Forever',
     cancelText: 'Cancel',
     type: 'confirm'
@@ -267,9 +275,9 @@ async function deleteForever(id) {
     await showModal({ title: 'Error', message: e.message, type: 'alert' });
     return;
   }
-  updateTrashBadge();
-  await renderAdminProducts();
-  await renderTrash();
+  try { updateTrashBadge(); } catch (_) {}
+  try { await renderAdminProducts(); } catch (_) {}
+  try { await renderTrash(); } catch (_) {}
 }
 
 async function updateTrashBadge() {
@@ -1517,11 +1525,11 @@ function initTheme() {
 /* ───── Custom Modal ───── */
 function showModal({ title, message, confirmText, cancelText, type, extraBtn }) {
   return new Promise((resolve) => {
-    const existing = document.querySelector('.custom-modal-overlay');
+    const existing = document.querySelector('.custom-modal-overlay.modal-dynamic');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
-    overlay.className = 'custom-modal-overlay';
+    overlay.className = 'custom-modal-overlay modal-dynamic';
     overlay.innerHTML = `
       <div class="custom-modal">
         <div class="custom-modal-header">
