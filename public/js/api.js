@@ -101,7 +101,10 @@ async function apiDelete(path) {
     }
     throw new Error('Session expired');
   }
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed: ${res.status}`);
+  }
   return res.json();
 }
 

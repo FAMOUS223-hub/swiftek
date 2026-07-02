@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -1715,86 +1716,120 @@ app.post('/api/admin/orders/bulk', requireAdmin, async (req, res) => {
 });
 
 app.get('/api/trash', requireAuth, async (req, res) => {
-  res.json(await TrashItem.findAll({ raw: true }));
+  try {
+    res.json(await TrashItem.findAll({ raw: true }));
+  } catch (err) {
+    console.error('[FETCH TRASH]', err.message);
+    res.status(500).json({ error: 'Failed to fetch trash: ' + err.message });
+  }
 });
 
 app.delete('/api/products/:id', requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
-  const product = await AdminProduct.findOne({ where: { id }, raw: true });
-  if (!product) return res.status(404).json({ error: 'Product not found' });
+  try {
+    const id = parseInt(req.params.id);
+    const product = await AdminProduct.findByPk(id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
 
-  await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
-  await AdminProduct.destroy({ where: { id } });
+    const data = product.get({ plain: true });
+    await TrashItem.create({ ...data, _trashedAt: new Date(), _wasAdminProduct: true });
+    await product.destroy();
 
-  invalidateProductCache();
-  res.json({ success: true });
+    invalidateProductCache();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[DELETE PRODUCT]', err.message);
+    res.status(500).json({ error: 'Failed to delete product: ' + err.message });
+  }
 });
 
 app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
-  const item = await TrashItem.findOne({ where: { id }, raw: true });
-  if (!item) return res.status(404).json({ error: 'Item not found in trash' });
+  try {
+    const id = parseInt(req.params.id);
+    const item = await TrashItem.findByPk(id);
+    if (!item) return res.status(404).json({ error: 'Item not found in trash' });
 
-  await TrashItem.destroy({ where: { id } });
+    const data = item.get({ plain: true });
+    await item.destroy();
 
-  const exists = await AdminProduct.findOne({ where: { id } });
-  if (!exists) {
-    const restored = { ...item };
-    delete restored._trashedAt;
-    delete restored._wasAdminProduct;
-    await AdminProduct.create(restored);
+    const exists = await AdminProduct.findByPk(id);
+    if (!exists) {
+      const restored = { ...data };
+      delete restored._trashedAt;
+      delete restored._wasAdminProduct;
+      await AdminProduct.create(restored);
+    }
+
+    invalidateProductCache();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[RESTORE PRODUCT]', err.message);
+    res.status(500).json({ error: 'Failed to restore product: ' + err.message });
   }
-
-  invalidateProductCache();
-  res.json({ success: true });
 });
 
 app.delete('/api/trash/:id', requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
-  await TrashItem.destroy({ where: { id } });
-  invalidateProductCache();
-  res.json({ success: true });
+  try {
+    const id = parseInt(req.params.id);
+    await TrashItem.destroy({ where: { id } });
+    invalidateProductCache();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[DELETE FOREVER]', err.message);
+    res.status(500).json({ error: 'Failed to permanently delete: ' + err.message });
+  }
 });
 
 app.post('/api/products/bulk-delete', requireAuth, async (req, res) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: 'No product IDs provided' });
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No product IDs provided' });
+    }
+    const products = await AdminProduct.findAll({ where: { id: ids } });
+    for (const product of products) {
+      const data = product.get({ plain: true });
+      await TrashItem.create({ ...data, _trashedAt: new Date(), _wasAdminProduct: true });
+    }
+    await AdminProduct.destroy({ where: { id: ids } });
+    invalidateProductCache();
+    res.json({ success: true, moved: products.length });
+  } catch (err) {
+    console.error('[BULK DELETE]', err.message);
+    res.status(500).json({ error: 'Failed to bulk delete: ' + err.message });
   }
-  const products = await AdminProduct.findAll({ where: { id: ids }, raw: true });
-  for (const product of products) {
-    await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
-  }
-  await AdminProduct.destroy({ where: { id: ids } });
-  invalidateProductCache();
-  res.json({ success: true, moved: products.length });
 });
 
 app.post('/api/trash/bulk', requireAuth, async (req, res) => {
-  const { ids, action } = req.body;
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: 'No IDs provided' });
-  }
-  if (action === 'restore') {
-    const items = await TrashItem.findAll({ where: { id: ids }, raw: true });
-    await TrashItem.destroy({ where: { id: ids } });
-    for (const item of items) {
-      const exists = await AdminProduct.findOne({ where: { id: item.id } });
-      if (!exists) {
-        const restored = { ...item };
-        delete restored._trashedAt;
-        delete restored._wasAdminProduct;
-        await AdminProduct.create(restored);
-      }
+  try {
+    const { ids, action } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No IDs provided' });
     }
-    invalidateProductCache();
-    res.json({ success: true, restored: items.length });
-  } else if (action === 'delete') {
-    await TrashItem.destroy({ where: { id: ids } });
-    invalidateProductCache();
-    res.json({ success: true, deleted: ids.length });
-  } else {
-    res.status(400).json({ error: 'Invalid action. Use "restore" or "delete".' });
+    if (action === 'restore') {
+      const items = await TrashItem.findAll({ where: { id: ids } });
+      await TrashItem.destroy({ where: { id: ids } });
+      for (const item of items) {
+        const data = item.get({ plain: true });
+        const exists = await AdminProduct.findByPk(item.id);
+        if (!exists) {
+          const restored = { ...data };
+          delete restored._trashedAt;
+          delete restored._wasAdminProduct;
+          await AdminProduct.create(restored);
+        }
+      }
+      invalidateProductCache();
+      res.json({ success: true, restored: items.length });
+    } else if (action === 'delete') {
+      await TrashItem.destroy({ where: { id: ids } });
+      invalidateProductCache();
+      res.json({ success: true, deleted: ids.length });
+    } else {
+      res.status(400).json({ error: 'Invalid action. Use "restore" or "delete".' });
+    }
+  } catch (err) {
+    console.error('[BULK TRASH]', err.message);
+    res.status(500).json({ error: 'Bulk trash action failed: ' + err.message });
   }
 });
 
@@ -1854,6 +1889,12 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   await user.save();
 
   res.json({ success: true });
+});
+
+/* ───── Global Error Handler ───── */
+app.use((err, req, res, next) => {
+  console.error('[UNHANDLED ERROR]', err.message);
+  res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 async function start() {
