@@ -12,6 +12,7 @@ const TrashItem = sequelize.define('TrashItem', {
   images: { type: DataTypes.JSONB, defaultValue: [] },
   specifications: { type: DataTypes.JSONB, defaultValue: {} },
   options: { type: DataTypes.JSONB, defaultValue: {} },
+  negotiable: { type: DataTypes.BOOLEAN, defaultValue: false },
   _trashedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   _wasAdminProduct: { type: DataTypes.BOOLEAN, defaultValue: false },
   _adminOverride: { type: DataTypes.BOOLEAN, defaultValue: false },

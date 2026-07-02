@@ -1727,12 +1727,11 @@ app.get('/api/trash', requireAuth, async (req, res) => {
 app.delete('/api/products/:id', requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const product = await AdminProduct.findByPk(id);
+    const product = await AdminProduct.findOne({ where: { id }, raw: true });
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
-    const data = product.get({ plain: true });
-    await TrashItem.create({ ...data, _trashedAt: new Date(), _wasAdminProduct: true });
-    await product.destroy();
+    await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
+    await AdminProduct.destroy({ where: { id } });
 
     invalidateProductCache();
     res.json({ success: true });
@@ -1745,15 +1744,14 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
 app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const item = await TrashItem.findByPk(id);
+    const item = await TrashItem.findOne({ where: { id }, raw: true });
     if (!item) return res.status(404).json({ error: 'Item not found in trash' });
 
-    const data = item.get({ plain: true });
-    await item.destroy();
+    await TrashItem.destroy({ where: { id } });
 
-    const exists = await AdminProduct.findByPk(id);
+    const exists = await AdminProduct.findOne({ where: { id } });
     if (!exists) {
-      const restored = { ...data };
+      const restored = { ...item };
       delete restored._trashedAt;
       delete restored._wasAdminProduct;
       await AdminProduct.create(restored);
@@ -1785,10 +1783,9 @@ app.post('/api/products/bulk-delete', requireAuth, async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'No product IDs provided' });
     }
-    const products = await AdminProduct.findAll({ where: { id: ids } });
+    const products = await AdminProduct.findAll({ where: { id: ids }, raw: true });
     for (const product of products) {
-      const data = product.get({ plain: true });
-      await TrashItem.create({ ...data, _trashedAt: new Date(), _wasAdminProduct: true });
+      await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
     }
     await AdminProduct.destroy({ where: { id: ids } });
     invalidateProductCache();
@@ -1806,13 +1803,12 @@ app.post('/api/trash/bulk', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'No IDs provided' });
     }
     if (action === 'restore') {
-      const items = await TrashItem.findAll({ where: { id: ids } });
+      const items = await TrashItem.findAll({ where: { id: ids }, raw: true });
       await TrashItem.destroy({ where: { id: ids } });
       for (const item of items) {
-        const data = item.get({ plain: true });
-        const exists = await AdminProduct.findByPk(item.id);
+        const exists = await AdminProduct.findOne({ where: { id: item.id } });
         if (!exists) {
-          const restored = { ...data };
+          const restored = { ...item };
           delete restored._trashedAt;
           delete restored._wasAdminProduct;
           await AdminProduct.create(restored);
