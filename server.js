@@ -1730,13 +1730,14 @@ app.delete('/api/products/:id', requireAuth, async (req, res) => {
     const product = await AdminProduct.findOne({ where: { id }, raw: true });
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
+    await TrashItem.destroy({ where: { id } });
     await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
     await AdminProduct.destroy({ where: { id } });
 
     invalidateProductCache();
     res.json({ success: true });
   } catch (err) {
-    console.error('[DELETE PRODUCT]', err.message);
+    console.error('[DELETE PRODUCT]', err.name, err.message);
     res.status(500).json({ error: 'Failed to delete product: ' + err.message });
   }
 });
@@ -1760,7 +1761,7 @@ app.post('/api/trash/:id/restore', requireAuth, async (req, res) => {
     invalidateProductCache();
     res.json({ success: true });
   } catch (err) {
-    console.error('[RESTORE PRODUCT]', err.message);
+    console.error('[RESTORE PRODUCT]', err.name, err.message);
     res.status(500).json({ error: 'Failed to restore product: ' + err.message });
   }
 });
@@ -1784,6 +1785,7 @@ app.post('/api/products/bulk-delete', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'No product IDs provided' });
     }
     const products = await AdminProduct.findAll({ where: { id: ids }, raw: true });
+    await TrashItem.destroy({ where: { id: products.map(p => p.id) } });
     for (const product of products) {
       await TrashItem.create({ ...product, _trashedAt: new Date(), _wasAdminProduct: true });
     }
@@ -1791,7 +1793,7 @@ app.post('/api/products/bulk-delete', requireAuth, async (req, res) => {
     invalidateProductCache();
     res.json({ success: true, moved: products.length });
   } catch (err) {
-    console.error('[BULK DELETE]', err.message);
+    console.error('[BULK DELETE]', err.name, err.message);
     res.status(500).json({ error: 'Failed to bulk delete: ' + err.message });
   }
 });
