@@ -1446,8 +1446,9 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/users/:id/orders', requireAdmin, async (req, res) => {
   try {
+    const userId = req.params.id;
     const { date } = req.query;
-    const where = {};
+    const where = { userId };
     if (date) {
       where.createdAt = {
         [Op.gte]: new Date(date),
@@ -1859,9 +1860,9 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
       await AdminProduct.create({ ...data, id, _adminCreated: true });
     }
   } else {
-    const maxDoc = await AdminProduct.findOne({ order: [['id', 'DESC']], raw: true });
-    const maxId = maxDoc ? maxDoc.id : 0;
-    await AdminProduct.create({ ...data, id: maxId + 1, _adminCreated: true });
+    const [result] = await sequelize.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM "AdminProducts"');
+    const nextId = result[0].next_id;
+    await AdminProduct.create({ ...data, id: nextId, _adminCreated: true });
   }
 
   invalidateProductCache();
